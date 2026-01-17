@@ -13,6 +13,7 @@ coverage/
 build/
 dist/
 
+
 # Misc
 .DS_Store
 .env
@@ -32,3 +33,6 @@ yarn-error.log*
 .vscode
 *.swp
 *.swo
+
+# Data
+backend/ingest-service/data/events.json

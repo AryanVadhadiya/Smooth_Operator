@@ -1,117 +1,156 @@
 # Threat_Ops.ai 🛡️
 
-**AI-Powered Threat Detection & Automated Response Platform**
+**AI-Powered Threat Detection & Automated Response Platform (SOAR)**
 
-Threat_Ops.ai is a microservices-based security platform that detects, analyzes, and responds to cyber threats in real-time.
+![Dashboard Overview](docs/images/dashboard-main.png)
 
-## 🚀 Quick Start
+Threat_Ops.ai is a comprehensive, microservices-based **Security Orchestration, Automation, and Response (SOAR)** platform. It provides real-time monitoring, AI-driven threat detection, and automated incident response for critical infrastructures (Healthcare, Agriculture, Urban Systems).
 
-The entire platform (Frontend + 5 Backend Services) can be started with a single command.
+---
 
-### 1. Prerequisites
-- Node.js & npm
-- Python 3.11+
-- Virtual environments created for backend services (already done if you followed the setup)
+## 🚀 Key Features
 
-### 2. Install Dependencies
+*   **Real-time Monitoring**: Live telemetry (CPU, RAM, Network) from distributed agents.
+*   **AI Detection Engine**: Rule-based and anomaly detection for SQLi, DDoS, Brute Force, and more.
+*   **Automated Response**: Instantly blocks IPs, isolates compromised services, and alerts SOC teams.
+*   **Microservices Architecture**: Scalable, modular design using Python (FastAPI) and Node.js.
+*   **Interactive Dashboard**: Beautiful, glassmorphism-inspired UI built with React & Tailwind CSS.
+*   **Red Team Tools**: Built-in Attack Simulator and Victim Agent for full-spectrum wargaming.
+
+---
+
+## 🏗️ System Architecture
+
+The system follows a modular microservices architecture, ensuring scalability and isolation.
+
+![Architecture Diagram](docs/images/architecture-diagram.png)
+
+### Core Components
+
+| Service | Port | Description |
+| :--- | :--- | :--- |
+| **Frontend** | `5173` | React Dashboard (Vite + Tailwind). Visualizes alerts and telemetry. |
+| **API Gateway** | `3001` | Socket.IO bridge. Handles real-time communication between UI and Backend. |
+| **Ingest Service** | `8001` | High-throughput entry point for telemetry logs. First line of validation. |
+| **Detection Engine** | `8002` | Analyzes events against security rules (SQLi, Port Scan, Abnormal Load). |
+| **Alert Manager** | `8003` | Correlates anomalies into human-readable Alerts. Deduplicates noise. |
+| **Response Engine** | `8004` | Executes Playbooks (e.g., Block IP, Kill Process) using `psutil`/IPTables. |
+
+---
+
+## ⚡ Quick Start (Local Dev)
+
+Running the entire platform takes just **one command**.
+
+### Prerequisites
+*   Node.js (v18+) & npm
+*   Python 3.11+
+*   Git
+
+### 1. Installation
+Clone the repo and install dependencies:
 ```bash
+git clone https://github.com/AryanVadhadiya/Smooth_Operator.git
+cd Smooth_Operator
 npm install
+```
 
-### 2.1 Backend Setup (First Time Only)
-Install Python dependencies for all microservices:
+### 2. Backend Setup
+Install Python dependencies for all microservices (only needed once):
 ```bash
+# Auto-install for all services
 for service in ingest-service api-gateway detection-engine alert-manager response-engine; do
   echo "Installing deps for $service..."
-  (cd backend/$service && source venv/bin/activate && pip install -r requirements.txt)
+  (cd backend/$service && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt)
 done
 ```
-```
 
-### 3. Run Everything
+### 3. Launch! 🚀
+Start all services (Frontend + 5 Backend Microservices) in parallel:
 ```bash
 npm run dev
 ```
-This command starts:
-- **Frontend** (http://localhost:5173)
-- **Ingest Service** (http://localhost:8001)
-- **API Gateway** (http://localhost:3001)
-- **Detection Engine** (http://localhost:8002)
-- **Alert Manager** (http://localhost:8003)
-- **Response Engine** (http://localhost:8004)
+
+Visit the **Dashboard** at [**http://localhost:5173**](http://localhost:5173).
 
 ---
 
-## 🎮 Demo Guide
+## 🎮 Wargame Mode: Red Team vs. Blue Team
 
-### The "Money Moment" 🎯
-1. **Open Dashboard**: Go to [http://localhost:5173](http://localhost:5173).
-2. **Verify Connection**: Ensure the status indicator says "Connected".
-3. **Trigger Attack**:
-   - Use the **"Simulate SQL Injection"** button on the frontend.
-   - OR use the CLI command below.
+Turn your setup into a live cyber-range with 3 devices.
 
-### Manual Attack Trigger (CLI)
-Run this from a new terminal to simulate a malicious SQL Injection attack:
-```bash
-curl -X POST http://localhost:8001/ingest \
-  -H "Content-Type: application/json" \
-  -d '{
-    "source_ip": "192.168.1.66",
-    "service": "payment-api",
-    "event_type": "http_request",
-    "payload": {
-        "query": "SELECT * FROM users WHERE id = 1 OR 1=1"
-    }
-}'
+### 🔷 Device A: Blue Team (The SOC)
+*   **Role**: Security Operations Center.
+*   **Action**: Run `npm run dev`. This hosts the backend and dashboard.
+*   **View**: Monitor the Dashboard on `localhost:5173`.
+
+### 🔻 Device B: The Victim (Target)
+*   **Role**: A server exposing critical services (Healthcare DB, SCADA Controller).
+*   **Setup**:
+    1.  Copy `scripts/monitor_server.py` to this machine.
+    2.  Run: `python monitor_server.py`.
+    3.  Enter Device A's IP when prompted (or configured in script).
+*   **Effect**: Streams **REAL** system metrics (CPU, RAM) to the Blue Team dashboard.
+
+![Monitor Agent](docs/images/agent-terminal.png)
+
+### ⚔️ Device C: Red Team (The Attacker)
+*   **Role**: External Threat Actor.
+*   **Setup**: Open `scripts/attacker_ui.html` in any browser.
+*   **Action**:
+    1.  Enter Device B's IP address.
+    2.  **Launch Attacks**: SQL Injection, Brute Force, or High-Volume DDoS flooding.
+    3.  **Config**: Customize concurrency and request count for stress testing.
+
+![Attacker Console](docs/images/attacker-console.png)
+
+---
+
+## 🛡️ Capabilities & Defense Logic
+
+### 1. SQL Injection (SQLi)
+*   **Attack**: `POST /data` with payload `OR 1=1`.
+*   **Detection**: Regex pattern match in `payload` content.
+*   **Response**: Immediate **IP Block**.
+
+### 2. DDoS / Flooding
+*   **Attack**: High frequency of requests (>100 req/min) from a single source.
+*   **Detection**: Rate limiting triggers in `Detection Engine`.
+*   **Response**: **Rate Limit** applied + Alert SOC.
+
+### 3. Critical System Load
+*   **Trigger**: Agent reports CPU > 90% or RAM > 95%.
+*   **Response**: **Service Isolation** (simulated process kill).
+
+---
+
+## 📂 Project Structure
+
+```
+Threat_Ops.ai/
+├── backend/                   # Microservices
+│   ├── api-gateway/           # WebSocket Hub (Port 3001)
+│   ├── ingest-service/        # Event Collector (Port 8001)
+│   ├── detection-engine/      # Analysis Logic (Port 8002)
+│   ├── alert-manager/         # Alert Logic (Port 8003)
+│   └── response-engine/       # Active Defense (Port 8004)
+├── frontend/                  # React Dashboard (Port 5173)
+├── scripts/                   # Standalone Tools
+│   ├── monitor_server.py      # Universal Victim Agent (Flask)
+│   └── attacker_ui.html       # Attack Console (HTML/JS)
+├── docs/                      # Documentation & Images
+└── arch.md                    # Detailed Architecture Docs
 ```
 
-### What Happens Next (The Pipeline)
-1. **Ingest**: Receives the event, saves it, and forwards it to Detection.
-2. **Detection**: Flags the `OR 1=1` pattern as a **Critical SQL Injection**.
-3. **Alert Manager**: Creates a human-readable alert "🚨 SQL Injection Attack Detected".
-4. **Response**: Automatically **Blocks IP 192.168.1.66** and isolates the service.
-5. **Frontend**: Instantly displays the Alert, updates the Device Status to "Offline/Isolated", and shows the Blocked IP count increase.
+---
+
+## 🔮 Future Roadmap
+
+*   [ ] **Machine Learning**: Replace regex rules with LSTM models for anomaly detection.
+*   [ ] **Containerization**: Docker Compose setup for consistent deployment.
+*   [ ] **Database**: Move from `json` files to `PostgreSQL` + `TimescaleDB`.
+*   [ ] **SIEM Integration**: Forward alerts to Splunk/Elastic.
 
 ---
 
-## 🌍 Multi-Device Remote Demo (Advanced)
-
-Turn this into a real "Red Team vs Blue Team" wargame using 3 devices.
-
-### Device A: Command Center (Your Mac)
-Running `npm run dev`. Find your IP (e.g., `192.168.1.5`).
-
-### Device B: The Victim Server (Monitor Agent)
-1. Copy `scripts/monitor_server.py` to this device.
-2. Install deps: `pip install flask psutil requests flask-cors`
-3. Edit the script: Update `MAIN_SERVER_URL` to point to Device A (e.g., `http://192.168.1.5:8001/ingest`).
-4. Run: `python3 monitor_server.py`
-   - It will start sending **REAL** CPU/RAM stats to your Dashboard.
-   - It also opens port `5050` to listen for attacks.
-
-### Device C: The Attacker (Red Team)
-1. Copy `scripts/attacker_ui.html` to any device (phone, laptop, tablet).
-2. Open it in a browser.
-3. Enter Target IP: `http://<DEVICE_B_IP>:5050`
-4. Click **"SQL Injection"** or **"DDoS"**.
-5. Watch the Dashboard on Device A light up with alerts!
-
----
-
-## 🏗️ Architecture
-
-| Service | Port | Description |
-|---------|------|-------------|
-| **Frontend** | 5173 | React + Vite Dashboard |
-| **API Gateway** | 3001 | Socket.IO Bridge |
-| **Ingest** | 8001 | Telemetry Entry Point |
-| **Detection** | 8002 | Anomaly Analysis |
-| **Alert** | 8003 | Alert Generation |
-| **Response** | 8004 | Automated Playbooks |
-
----
-
-## 🛠️ Development
-
-- **Stop All**: Press `Ctrl+C` in the terminal where `npm run dev` is running.
-- **Backend Logs**: All backend service logs stream to the same terminal, color-coded.
+**Built with ❤️ for Cyber Security.**
