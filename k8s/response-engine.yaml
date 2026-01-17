@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: response-engine
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: response-engine
+  template:
+    metadata:
+      labels:
+        app: response-engine
+    spec:
+      containers:
+      - name: response-engine
+        image: response-engine:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8004
+        env:
+        - name: PORT
+          value: "8004"
+        - name: API_GATEWAY_URL
+          value: "http://api-gateway:3001"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: response-engine
+spec:
+  selector:
+    app: response-engine
+  ports:
+  - port: 8004
+    targetPort: 8004
+  type: ClusterIP

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: detection-engine
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: detection-engine
+  template:
+    metadata:
+      labels:
+        app: detection-engine
+    spec:
+      containers:
+      - name: detection-engine
+        image: detection-engine:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8002
+        env:
+        - name: PORT
+          value: "8002"
+        - name: ALERT_MANAGER_URL
+          value: "http://alert-manager:8003"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: detection-engine
+spec:
+  selector:
+    app: detection-engine
+  ports:
+  - port: 8002
+    targetPort: 8002
+  type: ClusterIP

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-microservice
+spec:
+  replicas: 1  # ML might need more resources, adjust
+  selector:
+    matchLabels:
+      app: model-microservice
+  template:
+    metadata:
+      labels:
+        app: model-microservice
+    spec:
+      containers:
+      - name: model-microservice
+        image: model-microservice:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 5000
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: model-microservice
+spec:
+  selector:
+    app: model-microservice
+  ports:
+  - port: 5000
+    targetPort: 5000
+  type: ClusterIP

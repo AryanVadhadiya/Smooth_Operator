@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-manager
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: alert-manager
+  template:
+    metadata:
+      labels:
+        app: alert-manager
+    spec:
+      containers:
+      - name: alert-manager
+        image: alert-manager:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8003
+        env:
+        - name: PORT
+          value: "8003"
+        - name: API_GATEWAY_URL
+          value: "http://api-gateway:3001"
+        - name: RESPONSE_ENGINE_URL
+          value: "http://response-engine:8004"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-manager
+spec:
+  selector:
+    app: alert-manager
+  ports:
+  - port: 8003
+    targetPort: 8003
+  type: ClusterIP

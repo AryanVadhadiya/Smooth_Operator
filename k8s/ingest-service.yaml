@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingest-service
+spec:
+  replicas: 2  # Scale as needed
+  selector:
+    matchLabels:
+      app: ingest-service
+  template:
+    metadata:
+      labels:
+        app: ingest-service
+    spec:
+      containers:
+      - name: ingest-service
+        image: ingest-service:latest  # Build and tag accordingly
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8001
+        env:
+        - name: PORT
+          value: "8001"
+        - name: DETECTION_ENGINE_URL
+          value: "http://detection-engine:8002"
+        - name: API_GATEWAY_URL
+          value: "http://api-gateway:3001"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingest-service
+spec:
+  selector:
+    app: ingest-service
+  ports:
+  - port: 8001
+    targetPort: 8001
+  type: ClusterIP
