@@ -162,4 +162,10 @@
   .glow-red {
     box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
   }
+
+  /* Thin scrollbar for specific elements */
+  .thin-scrollbar::-webkit-scrollbar {
+    width: 4px !important;
+    height: 4px !important;
+  }
 }

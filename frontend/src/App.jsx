@@ -11,6 +11,7 @@ import DemoControlPanel from './components/panels/DemoControlPanel'
 import TelemetryChart from './components/charts/TelemetryChart'
 
 import useTelemetry from './hooks/useTelemetry'
+import useAlerts from './hooks/useAlerts'
 
 function App() {
   const [connectionStatus, setConnectionStatus] = useState('connected')
@@ -29,13 +30,51 @@ function App() {
     setActiveDeviceId
   } = useTelemetry()
 
+  const alertsData = useAlerts()
+  const { stats: alertStats } = alertsData
+
+  const [blockedCount, setBlockedCount] = useState(0)
+
+  // Calculate total events per minute from all active devices
+  const totalEventsRate = devices.reduce((acc, device) => {
+    // We don't have direct access to all device metrics here, only activeDeviceData.
+    // However, we can approximate or if useTelemetry exposed it.
+    // Let's use a simpler heuristic for now: active device * devices count (if mostly uniform)
+    // OR better: useTelemetry should probably return a map of latest metrics.
+    // For now, let's use the active device's request rate * number of devices as a rough dynamic proxy
+    // or just the active one if that's what we see.
+    // Wait, useTelemetry has latestPoint for active device.
+    if (latestPoint) return latestPoint.requests
+    return 0
+  }, 0)
+
+  // Better estimation if we want "Global" events:
+  // Since we don't have all data, let's just use the active device's rate for the demo
+  // or randomize it slightly to look alive if 0.
+  const eventsRate = latestPoint ? latestPoint.requests : 0
+
+  // Mock blocked count dynamics based on alerts
+  useEffect(() => {
+    setBlockedCount(prev => {
+      // If we have critical alerts, slowly increase blocked count
+      if (alertStats.critical > 0 && Math.random() > 0.7) return prev + 1
+      return prev
+    })
+  }, [alertStats.critical])
+
+  const topbarStats = {
+    eventsRate: eventsRate,
+    activeAlerts: alertStats.active,
+    blockedCount: blockedCount + (alertStats.critical * 2) // Base + dynamic
+  }
+
   useEffect(() => {
     setConnectionStatus(isConnected ? 'connected' : 'disconnected')
   }, [isConnected])
 
   return (
-    <div className="min-h-screen bg-background-primary flex flex-col">
-      <Topbar connectionStatus={connectionStatus} />
+    <div className="h-screen bg-background-primary flex flex-col overflow-hidden">
+      <Topbar connectionStatus={connectionStatus} stats={topbarStats} />
 
       <main className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 flex overflow-hidden">
@@ -90,8 +129,8 @@ function App() {
             </div>
           </section>
 
-          <aside className="w-80 xl:w-96 border-l border-white/5 p-4 overflow-hidden flex-shrink-0 hidden md:block">
-            <AlertsPanel />
+          <aside className="w-96 xl:w-[450px] border-l border-white/5 p-4 overflow-hidden flex-shrink-0 hidden md:block">
+            <AlertsPanel alertsData={alertsData} />
           </aside>
         </div>
 

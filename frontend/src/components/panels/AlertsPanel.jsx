@@ -2,9 +2,9 @@ import { memo } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import AlertCard from '@components/alerts/AlertCard'
 import AlertDetailModal from '@components/alerts/AlertDetailModal'
-import useAlerts from '@hooks/useAlerts'
 
-function AlertsPanel() {
+
+function AlertsPanel({ alertsData }) {
   const {
     alerts,
     selectedAlert,
@@ -16,10 +16,10 @@ function AlertsPanel() {
     dismissAlert,
     acknowledgeAll,
     clearAcknowledged,
-  } = useAlerts()
+  } = alertsData
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-section font-medium text-text-primary flex items-center gap-2">
           <span className="text-status-warning">⚠</span>
@@ -64,7 +64,7 @@ function AlertsPanel() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 thin-scrollbar relative">
         <AnimatePresence mode="popLayout">
           {alerts.length > 0 ? (
             alerts.map((alert) => (

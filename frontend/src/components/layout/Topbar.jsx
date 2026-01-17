@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 
-export default function Topbar({ connectionStatus = 'connected' }) {
+export default function Topbar({ connectionStatus = 'connected', stats }) {
   const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
@@ -63,15 +63,21 @@ export default function Topbar({ connectionStatus = 'connected' }) {
         <div className="hidden md:flex items-center gap-4 text-caption">
           <div className="flex items-center gap-1.5">
             <span className="text-text-muted">Events:</span>
-            <span className="text-status-normal font-mono">2.8k/min</span>
+            <span className="text-status-normal font-mono">
+              {stats?.eventsRate > 999 ? (stats.eventsRate / 1000).toFixed(1) + 'k' : stats?.eventsRate || '0'}/min
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-text-muted">Alerts:</span>
-            <span className="text-status-warning font-mono">7</span>
+            <span className={`font-mono ${stats?.activeAlerts > 0 ? 'text-status-warning' : 'text-text-secondary'}`}>
+              {stats?.activeAlerts || '0'}
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-text-muted">Blocked:</span>
-            <span className="text-status-critical font-mono">23</span>
+            <span className={`font-mono ${stats?.blockedCount > 0 ? 'text-status-critical' : 'text-text-secondary'}`}>
+              {stats?.blockedCount || '0'}
+            </span>
           </div>
         </div>
       </div>

@@ -23,6 +23,14 @@ DEVICE_IP = socket.gethostbyname(DEVICE_ID)
 app = Flask(__name__)
 CORS(app)
 
+REQUEST_COUNT = 0
+
+@app.before_request
+def count_request():
+    global REQUEST_COUNT
+    if request.path != '/status': # Ignore health checks from getting counted as "traffic"
+        REQUEST_COUNT += 1
+
 @app.route('/')
 def home():
     try:
@@ -124,6 +132,10 @@ def telemetry_loop():
             except Exception:
                 network_count = 0
 
+            global REQUEST_COUNT
+            requests_per_min = REQUEST_COUNT * 30
+            REQUEST_COUNT = 0
+
             telemetry = {
                 "source_ip": DEVICE_IP,
                 "service": DEVICE_NAME,
@@ -134,7 +146,7 @@ def telemetry_loop():
                     "memory": memory_info.percent,
                     "disk": disk_info.percent,
                     "network": network_count,
-                    "requests": 0
+                    "requests": requests_per_min
                 }
             }
 

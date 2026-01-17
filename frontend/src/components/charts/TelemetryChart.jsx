@@ -213,7 +213,7 @@ function TelemetryChart({
         </div>
       )}
 
-      <div className="flex-shrink-0 h-48 w-full">
+      <div className="flex-1 min-h-0 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}
