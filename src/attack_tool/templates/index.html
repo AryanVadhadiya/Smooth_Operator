@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Team Attack Console</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #0f172a;
+            color: #ef4444;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .console {
+            width: 100%;
+            max-width: 600px;
+            background: #000;
+            border: 2px solid #ef4444;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+        }
+
+        h1 {
+            text-align: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 20px;
+            margin-top: 0;
+            text-transform: uppercase;
+        }
+
+        .status-bar {
+            background: #1e1e1e;
+            padding: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            border-radius: 4px;
+        }
+
+        .status-idle {
+            color: #64748b;
+        }
+
+        .status-attacking {
+            color: #ef4444;
+            font-weight: bold;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #94a3b8;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            background: #111;
+            border: 1px solid #333;
+            color: #fff;
+            font-family: inherit;
+            box-sizing: border-box;
+            /* Fixes padding overflow */
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #ef4444;
+        }
+
+        .btn-launch {
+            width: 100%;
+            padding: 15px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 1.1em;
+            margin-top: 10px;
+        }
+
+        .btn-launch:hover {
+            background: #dc2626;
+        }
+
+        .btn-stop {
+            width: 100%;
+            padding: 15px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #666;
+            margin-top: 10px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .btn-stop:hover {
+            background: #444;
+        }
+
+        .terminal-output {
+            margin-top: 20px;
+            height: 150px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            padding: 10px;
+            overflow-y: auto;
+            color: #ccc;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="console">
+        <h1>💀 Red Team Console</h1>
+
+        <div class="status-bar">
+            STATUS: <span id="statusText" class="status-idle">IDLE - WAITING FOR TARGET</span>
+        </div>
+
+        <div id="controls">
+            <div class="form-group">
+                <label>TARGET IP ADDRESS (VICTIM)</label>
+                <input type="text" id="targetIp" placeholder="192.168.1.xxx" required>
+            </div>
+
+            <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label>TARGET PORT</label>
+                    <input type="number" id="targetPort" value="80" placeholder="80">
+                </div>
+                <div>
+                    <label>THREAD COUNT</label>
+                    <input type="number" id="threads" value="100" placeholder="100">
+                </div>
+            </div>
+
+            <button class="btn-launch" onclick="launchAttack()">🚀 LAUNCH ATTACK</button>
+        </div>
+
+        <button id="stopBtn" class="btn-stop" onclick="stopAttack()">🛑 TERMINATE ATTACK</button>
+
+        <div class="terminal-output" id="logs">
+            > Red Team Console initialized...<br>
+            > Waiting for parameters...
+        </div>
+    </div>
+
+    <script>
+        const logDiv = document.getElementById('logs');
+
+        function log(msg) {
+            logDiv.innerHTML += `> ${msg}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function launchAttack() {
+            const target = document.getElementById('targetIp').value;
+            const port = document.getElementById('targetPort').value;
+            const threads = document.getElementById('threads').value;
+
+            if (!target) {
+                log('ERROR: Target IP required');
+                return;
+            }
+
+            log(`initiating attack sequence on ${target}:${port}...`);
+
+            try {
+                const res = await fetch('/api/attack', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_ip: target, port: parseInt(port), threads: parseInt(threads) })
+                });
+                const data = await res.json();
+
+                if (data.status === 'started') {
+                    setRunning(true);
+                    log(`ATTACK STARTED with PID ${data.pid}`);
+                    log(`Sending ${threads} concurrent streams to target...`);
+                } else {
+                    log(`ERROR: ${data.error}`);
+                }
+            } catch (e) {
+                log(`CONNECTION ERROR: ${e}`);
+            }
+        }
+
+        async function stopAttack() {
+            log('Sending terminate signal...');
+            try {
+                const res = await fetch('/api/stop', { method: 'POST' });
+                const data = await res.json();
+                setRunning(false);
+                log('Attack terminated.');
+            } catch (e) {
+                log(`ERROR: ${e}`);
+            }
+        }
+
+        function setRunning(isRunning) {
+            const statusText = document.getElementById('statusText');
+            const controls = document.getElementById('controls');
+            const stopBtn = document.getElementById('stopBtn');
+
+            if (isRunning) {
+                statusText.textContent = 'ATTACK IN PROGRESS';
+                statusText.className = 'status-attacking';
+                controls.style.display = 'none';
+                stopBtn.style.display = 'block';
+            } else {
+                statusText.textContent = 'IDLE - WAITING FOR TARGET';
+                statusText.className = 'status-idle';
+                controls.style.display = 'block';
+                stopBtn.style.display = 'none';
+            }
+        }
+
+        // Initial check
+        fetch('/api/status').then(r => r.json()).then(d => {
+            if (d.running) setRunning(true);
+        });
+    </script>
+</body>
+
+</html>
