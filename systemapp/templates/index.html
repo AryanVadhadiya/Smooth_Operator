@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threat_Ops // Agent Console</title>
+    <link rel="stylesheet" href="../static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="overlay"></div>
+    <div class="scan-line"></div>
+    
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="icon">🛡️</span> THREAT_OPS <span class="blink">_</span>
+            </div>
+            <div class="status-badge" id="conn-status">WAITING FOR SIGNAL...</div>
+        </header>
+
+        <main>
+            <!-- System Diagnostics Panel -->
+            <section class="panel agent-status">
+                <h2>// SYSTEM_DIAGNOSTICS</h2>
+                <div class="grid">
+                    <div class="metric">
+                        <label>DEVICE ID</label>
+                        <span id="device-name">LOADING...</span>
+                    </div>
+                    <div class="metric">
+                        <label>IP ADDRESS</label>
+                        <span id="device-ip">.. . .. . .</span>
+                    </div>
+                </div>
+                <div class="grid">
+                    <div class="metric">
+                        <label>CPU USAGE</label>
+                        <span id="cpu-usage">---%</span>
+                    </div>
+                    <div class="metric">
+                        <label>MEMORY USAGE</label>
+                        <span id="memory-usage">---%</span>
+                    </div>
+                </div>
+                <div class="grid">
+                    <div class="metric">
+                        <label>DISK USAGE</label>
+                        <span id="disk-usage">---%</span>
+                    </div>
+                    <div class="metric">
+                        <label>UPTIME</label>
+                        <span id="uptime">00:00:00</span>
+                    </div>
+                </div>
+                <div class="grid">
+                    <div class="metric">
+                        <label>CPU CORES/THREADS</label>
+                        <span id="cpu-cores">--- / ---</span>
+                    </div>
+                    <div class="metric">
+                        <label>TOTAL MEMORY</label>
+                        <span id="total-memory">--- GB</span>
+                    </div>
+                </div>
+                <div class="grid">
+                    <div class="metric">
+                        <label>ACTIVE PROCESSES</label>
+                        <span id="processes">---</span>
+                    </div>
+                    <div class="metric">
+                        <label>LOAD AVERAGE</label>
+                        <span id="load-avg">---</span>
+                    </div>
+                </div>
+                <div class="grid">
+                    <div class="metric">
+                        <label>NETWORK SENT</label>
+                        <span id="network-sent">--- MB</span>
+                    </div>
+                    <div class="metric">
+                        <label>NETWORK RECEIVED</label>
+                        <span id="network-recv">--- MB</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Attack Simulations -->
+            <section class="panel attack-modules">
+                <h2>// THREAT_SIMULATION_MODULES</h2>
+                
+                <div class="module-grid">
+                    <!-- Auth Attack -->
+                    <div class="module">
+                        <h3>01. AUTH_BREACH.exe</h3>
+                        <p class="desc">Simulate a brute force or credential stuffing attack.</p>
+                        <form id="auth-form">
+                            <div class="input-group">
+                                <label>USERNAME</label>
+                                <input type="text" id="username" placeholder="admin" value="admin">
+                            </div>
+                            <button type="submit" class="btn-danger">EXECUTE</button>
+                        </form>
+                    </div>
+
+                    <!-- SQL Injection -->
+                    <div class="module">
+                        <h3>02. SQL_INJECT.bat</h3>
+                        <p class="desc">Attempt to bypass logic with malicious queries.</p>
+                        <form id="sql-form">
+                            <div class="input-group">
+                                <label>QUERY_STRING</label>
+                                <input type="text" id="query" placeholder="' OR 1=1 --" value="' OR 1=1 --">
+                            </div>
+                            <button type="submit" class="btn-danger">INJECT</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Server Configuration Panel -->
+            <section class="panel server-config">
+                <h2>// SERVER_CONFIGURATION</h2>
+                <form id="server-config-form">
+                    <div class="input-group">
+                        <label>TARGET SERVER IP:PORT</label>
+                        <input type="text" id="server-ip" placeholder="10.110.5.98:8001" value="10.110.5.98:8001">
+                    </div>
+                    <button type="submit" class="btn-primary">UPDATE TARGET</button>
+                </form>
+            </section>
+
+            <!-- Console Output -->
+            <section class="panel console">
+                <div class="console-header">
+                    <span>TERMINAL_OUTPUT</span>
+                    <button id="clear-console">CLEAR</button>
+                </div>
+                <div class="console-body" id="console-output">
+                    <div class="log-line system">> SYSTEM INITIALIZED...</div>
+                    <div class="log-line system">> LISTENING FOR COMMANDS...</div>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            THREAT_OPS SECURITY SYSTEMS v1.0.4 || UNATHORIZED ACCESS IS PROHIBITED
+        </footer>
+    </div>
+
+    <script src="../static/script.js"></script>
+</body>
+</html>
