@@ -80,33 +80,57 @@
                 <div id="targetHistory" class="flex flex-wrap gap-2 mt-3"></div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="launchAttack('sql')" class="group relative bg-slate-800 hover:bg-red-900/30 border border-slate-700 hover:border-red-500 p-4 rounded-lg flex flex-col items-center gap-2 btn">
-                    <span class="text-2xl">💉</span>
-                    <span class="font-bold text-red-400 group-hover:text-red-300">SQL Injection</span>
-                    <span class="text-xs text-slate-500">Injects 'OR 1=1' payload</span>
+            <!-- General Attacks -->
+            <div class="text-xs text-slate-500 uppercase tracking-wide mt-2 mb-1">🎯 General Attacks</div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="launchAttack('sql')" class="group relative bg-slate-800 hover:bg-red-900/30 border border-slate-700 hover:border-red-500 p-3 rounded-lg flex flex-col items-center gap-1 btn">
+                    <span class="text-xl">💉</span>
+                    <span class="font-bold text-sm text-red-400">SQL Injection</span>
+                    <span class="text-[10px] text-slate-500">Web Brain Detection</span>
                 </button>
 
-                <button onclick="launchAttack('brute')" class="group relative bg-slate-800 hover:bg-orange-900/30 border border-slate-700 hover:border-orange-500 p-4 rounded-lg flex flex-col items-center gap-2 btn">
-                    <span class="text-2xl">🔨</span>
-                    <span class="font-bold text-orange-400 group-hover:text-orange-300">Brute Force</span>
-                    <span class="text-xs text-slate-500">Spams login attempts</span>
+                <button onclick="launchAttack('brute')" class="group relative bg-slate-800 hover:bg-orange-900/30 border border-slate-700 hover:border-orange-500 p-3 rounded-lg flex flex-col items-center gap-1 btn">
+                    <span class="text-xl">🔨</span>
+                    <span class="font-bold text-sm text-orange-400">Brute Force</span>
+                    <span class="text-[10px] text-slate-500">Auth spam</span>
                 </button>
 
-                <button onclick="launchAttack('ddos')" class="group relative bg-slate-800 hover:bg-yellow-900/30 border border-slate-700 hover:border-yellow-500 p-4 rounded-lg flex flex-col items-center gap-2 btn">
-                    <span class="text-2xl">🌊</span>
-                    <span class="font-bold text-yellow-400 group-hover:text-yellow-300">Flooding</span>
-                    <span class="text-xs text-slate-500">Rapid fire requests</span>
+                <button onclick="launchAttack('ddos')" class="group relative bg-slate-800 hover:bg-yellow-900/30 border border-slate-700 hover:border-yellow-500 p-3 rounded-lg flex flex-col items-center gap-1 btn">
+                    <span class="text-xl">🌊</span>
+                    <span class="font-bold text-sm text-yellow-400">Network Flood</span>
+                    <span class="text-[10px] text-slate-500">Network Shield Detection</span>
                 </button>
 
-                <button onclick="launchAttack('scan')" class="group relative bg-slate-800 hover:bg-blue-900/30 border border-slate-700 hover:border-blue-500 p-4 rounded-lg flex flex-col items-center gap-2 btn">
-                    <span class="text-2xl">📡</span>
-                    <span class="font-bold text-blue-400 group-hover:text-blue-300">Port Scan</span>
-                    <span class="text-xs text-slate-500">Probes endpoints</span>
+                <button onclick="launchAttack('scan')" class="group relative bg-slate-800 hover:bg-blue-900/30 border border-slate-700 hover:border-blue-500 p-3 rounded-lg flex flex-col items-center gap-1 btn">
+                    <span class="text-xl">📡</span>
+                    <span class="font-bold text-sm text-blue-400">Port Scan</span>
+                    <span class="text-[10px] text-slate-500">Reconnaissance</span>
                 </button>
             </div>
 
-            <button id="stopBtn" onclick="stopAttack()" class="w-full bg-red-900/50 hover:bg-red-800 border border-red-700 text-red-100 py-3 rounded-lg font-bold hidden animate-pulse">
+            <!-- Sector-Specific ML Attacks -->
+            <div class="text-xs text-slate-500 uppercase tracking-wide mt-4 mb-1">🧠 Sector ML Attacks</div>
+            <div class="grid grid-cols-3 gap-3">
+                <button onclick="launchAttack('healthcare')" class="group relative bg-slate-800 hover:bg-pink-900/30 border border-slate-700 hover:border-pink-500 p-3 rounded-lg flex flex-col items-center gap-1 btn">
+                    <span class="text-xl">🏥</span>
+                    <span class="font-bold text-sm text-pink-400">IoMT DDoS</span>
+                    <span class="text-[10px] text-slate-500">Health Brain</span>
+                </button>
+
+                <button onclick="launchAttack('agriculture')" class="group relative bg-slate-800 hover:bg-green-900/30 border border-slate-700 hover:border-green-500 p-3 rounded-lg flex flex-col items-center gap-1 btn">
+                    <span class="text-xl">🌾</span>
+                    <span class="font-bold text-sm text-green-400">Sensor Spoof</span>
+                    <span class="text-[10px] text-slate-500">Agri Brain</span>
+                </button>
+
+                <button onclick="launchAttack('urban')" class="group relative bg-slate-800 hover:bg-cyan-900/30 border border-slate-700 hover:border-cyan-500 p-3 rounded-lg flex flex-col items-center gap-1 btn">
+                    <span class="text-xl">🚦</span>
+                    <span class="font-bold text-sm text-cyan-400">Traffic Jam</span>
+                    <span class="text-[10px] text-slate-500">Urban Brain</span>
+                </button>
+            </div>
+
+            <button id="stopBtn" onclick="stopAttack()" class="w-full bg-red-900/50 hover:bg-red-800 border border-red-700 text-red-100 py-3 rounded-lg font-bold hidden animate-pulse mt-3">
                 🛑 STOP ACTIVE ATTACK
             </button>
         </div>
@@ -227,10 +251,11 @@
                     try {
                         let res;
                         if (type === 'sql') {
+                            // Web Brain: SQLi payload for TF-IDF detection
                             res = await fetch(`${target}/data`, {
                                 method: 'POST',
                                 headers: {'Content-Type': 'application/json'},
-                                body: JSON.stringify({ query: `SELECT * FROM users WHERE id=${1000+currentId} OR 1=1` })
+                                body: JSON.stringify({ query: `SELECT * FROM users WHERE id=${1000+currentId} OR 1=1 --` })
                             });
                         } else if (type === 'brute') {
                             res = await fetch(`${target}/login`, {
@@ -239,11 +264,56 @@
                                 body: JSON.stringify({ username: `admin_${currentId}`, password: `pass${Math.random()}` })
                             });
                         } else if (type === 'ddos') {
+                            // Network Shield: High-rate requests
                             res = await fetch(`${target}/?t=${Date.now()}_${currentId}`);
                         } else if (type === 'scan') {
-                            // Port scan is slightly different, simulating delay
-                             await new Promise(r => setTimeout(r, 50));
-                             res = { ok: Math.random() > 0.8 }; // Random 'open' ports
+                            await new Promise(r => setTimeout(r, 50));
+                            res = { ok: Math.random() > 0.8 };
+                        } else if (type === 'healthcare') {
+                            // Health Brain: IoMT DDoS - high payload_size, frequency
+                            res = await fetch(`${target}/iomt`, {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    domain: 'healthcare',
+                                    sensor_data: [
+                                        Math.random() * 5000 + 1000,    // payload_size (high)
+                                        Math.floor(Math.random() * 500) + 100, // total_messages (high)
+                                        Math.random() * 100 + 50,      // frequency (high)
+                                        Math.random() * 80 + 40        // mean_frequency (high)
+                                    ]
+                                })
+                            });
+                        } else if (type === 'agriculture') {
+                            // Agri Brain: Physics violation - high temp + low water (attack pattern from train.py)
+                            res = await fetch(`${target}/sensors`, {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    domain: 'agriculture',
+                                    sensor_data: [
+                                        Math.floor(Math.random() * 50) + 50,  // temperature (50-100, anomaly)
+                                        Math.floor(Math.random() * 10),        // humidity (0-10, anomaly)
+                                        Math.floor(Math.random() * 20),        // water_level (0-20, anomaly)
+                                        Math.floor(Math.random() * 255),       // N
+                                        Math.floor(Math.random() * 255),       // P
+                                        Math.floor(Math.random() * 255)        // K
+                                    ]
+                                })
+                            });
+                        } else if (type === 'urban') {
+                            // Urban Brain: Traffic anomaly - zero vehicles, zero speed (jam)
+                            res = await fetch(`${target}/traffic`, {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    domain: 'urban',
+                                    sensor_data: [
+                                        0,  // Vehicle Count (0 = jam)
+                                        0   // Avg Speed (0 = stopped)
+                                    ]
+                                })
+                            });
                         }
 
                         if(res && res.ok) successCount++;

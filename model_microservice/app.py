@@ -142,47 +142,47 @@ def analyze_packet():
             for col in net_cols:
                 if col not in net_df.columns:
                     net_df[col] = 0
-            net_df = net_df[net_cols] 
-            
+            net_df = net_df[net_cols]
+
             # Scale & Predict
             net_scaled = net_scaler.transform(net_df.values)
             net_tensor = torch.FloatTensor(net_scaled).to(DEVICE)
-            
+
             with torch.no_grad():
                 net_score = net_model(net_tensor).item()
-            
+
             # --- HEURISTIC ATTACK DETECTION (supplementing the model) ---
             # Since the model needs recalibration, use feature-based detection
             # Attack indicators: high Rate, high syn_count, high rst_count, low IAT
             raw_data = req['network_data']
             is_attack = False
             attack_reasons = []
-            
+
             # High rate traffic (potential DDoS)
             if raw_data.get('Rate', 0) > 500000:
                 is_attack = True
                 attack_reasons.append("High traffic rate")
-            
+
             # High SYN count (SYN flood)
             if raw_data.get('syn_count', 0) > 50:
                 is_attack = True
                 attack_reasons.append("High SYN count")
-            
+
             # High RST count (port scanning/DoS)
             if raw_data.get('rst_count', 0) > 30:
                 is_attack = True
                 attack_reasons.append("High RST count")
-            
+
             # Very low inter-arrival time (flood attack)
             if raw_data.get('IAT', 1000) < 200:
                 is_attack = True
                 attack_reasons.append("Suspicious packet timing")
-            
+
             # High packet count in short time
             if raw_data.get('Number', 0) > 60:
                 is_attack = True
                 attack_reasons.append("High packet volume")
-            
+
             if is_attack:
                 # Calculate threat score based on how many indicators triggered
                 threat_score = min(0.5 + len(attack_reasons) * 0.15, 1.0)
@@ -203,8 +203,8 @@ def analyze_packet():
         if web_model and 'payload' in req and req['payload']:
             text_vec = web_vectorizer.transform([req['payload']])
             is_attack = web_model.predict(text_vec)[0]
-            
-            if is_attack == 1: 
+
+            if is_attack == 1:
                 log_entry = {
                     "id": len(SYSTEM_LOGS) + 1,
                     "timestamp": datetime.now().isoformat(),
@@ -219,14 +219,14 @@ def analyze_packet():
 
         # --- LAYER 3: SECTOR SPECIFIC BRAINS ---
         if 'sensor_data' in req:
-            raw_point = req['sensor_data'] 
-            
+            raw_point = req['sensor_data']
+
             # --- AGRICULTURE (Random Forest) ---
             if sector == "agriculture" and agri_model:
                 # RF expects shape (1, features)
-                point = np.array([raw_point]) 
+                point = np.array([raw_point])
                 prediction = agri_model.predict(point)[0] # 0 or 1
-                
+
                 if prediction == 1:
                     response["status"] = "isolated"
                     response["threat_level"] = "medium"
@@ -239,10 +239,10 @@ def analyze_packet():
                 if len(buffer) == SEQ_LEN_HEALTH:
                     scaled_seq = health_scaler.transform(buffer)
                     tensor_seq = torch.FloatTensor(scaled_seq).unsqueeze(0).to(DEVICE)
-                    
+
                     with torch.no_grad():
                         prob = health_model(tensor_seq).item()
-                    
+
                     if prob > 0.7:
                         response["status"] = "quarantined"
                         response["threat_level"] = "critical"
@@ -254,10 +254,10 @@ def analyze_packet():
                 if len(buffer) == 10:
                     scaled_seq = urban_scaler.transform(buffer)
                     tensor_seq = torch.FloatTensor(scaled_seq).unsqueeze(0).to(DEVICE)
-                    
+
                     with torch.no_grad():
                         prediction = urban_model(tensor_seq).numpy()[0]
-                    
+
                     pred_real = urban_scaler.inverse_transform([prediction])[0]
                     response["prediction"] = pred_real.tolist()
 
@@ -275,4 +275,5 @@ def analyze_packet():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    print("🧠 Model Microservice running on port 8006")
+    app.run(debug=False, port=8006, host='0.0.0.0')

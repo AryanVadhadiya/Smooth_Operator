@@ -10,7 +10,8 @@
     "dev:detection": "cd backend/detection-engine && source venv/bin/activate && python main.py",
     "dev:alert": "cd backend/alert-manager && source venv/bin/activate && python main.py",
     "dev:response": "cd backend/response-engine && source venv/bin/activate && python main.py",
-    "dev:backend": "npx concurrently -k -c \"blue,magenta,cyan,yellow,red\" -n \"INGEST,GATEWAY,DETECT,ALERT,RESP\" \"npm run dev:ingest\" \"npm run dev:gateway\" \"npm run dev:detection\" \"npm run dev:alert\" \"npm run dev:response\"",
+    "dev:model": "cd model_microservice && source venv/bin/activate && python app.py",
+    "dev:backend": "npx concurrently -k -c \"blue,magenta,cyan,yellow,red,white\" -n \"INGEST,GATEWAY,DETECT,ALERT,RESP,MODEL\" \"npm run dev:ingest\" \"npm run dev:gateway\" \"npm run dev:detection\" \"npm run dev:alert\" \"npm run dev:response\" \"npm run dev:model\"",
     "dev": "npx concurrently -k -c \"green,blue\" -n \"FRONT,BACK\" \"npm run dev:frontend\" \"npm run dev:backend\""
   },
   "devDependencies": {

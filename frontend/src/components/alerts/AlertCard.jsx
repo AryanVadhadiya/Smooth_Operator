@@ -57,6 +57,23 @@ function AlertCard({
     return `${Math.floor(seconds / 86400)}d ago`
   }
 
+  // Get sector badge based on rule_id or evidence
+  const getSectorBadge = () => {
+    const ruleId = alert.rule_id || ''
+    if (ruleId.includes('health') || alert.evidence?.ml_response?.sector === 'healthcare') {
+      return { icon: '🏥', label: 'Healthcare', color: 'bg-pink-500/20 text-pink-400' }
+    }
+    if (ruleId.includes('agri') || alert.evidence?.ml_response?.sector === 'agriculture') {
+      return { icon: '🌾', label: 'Agriculture', color: 'bg-green-500/20 text-green-400' }
+    }
+    if (ruleId.includes('urban') || alert.evidence?.ml_response?.sector === 'urban') {
+      return { icon: '🚦', label: 'Urban', color: 'bg-cyan-500/20 text-cyan-400' }
+    }
+    return null
+  }
+
+  const sectorBadge = getSectorBadge()
+
   return (
     <motion.div
       layout
@@ -80,6 +97,16 @@ function AlertCard({
           }`}>
             {alert.title}
           </span>
+          {alert.title?.includes('ML:') && (
+            <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-accent-purple/20 text-accent-purple">
+              🧠 AI
+            </span>
+          )}
+          {sectorBadge && (
+            <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${sectorBadge.color}`}>
+              {sectorBadge.icon} {sectorBadge.label}
+            </span>
+          )}
         </div>
         <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${config.badge}`}>
           {config.label}
@@ -87,9 +114,16 @@ function AlertCard({
       </div>
 
       {!compact && (
-        <p className="text-caption text-text-muted mb-2 line-clamp-2">
-          {alert.description}
-        </p>
+        <>
+          <p className="text-caption text-text-muted mb-2 line-clamp-2">
+            {alert.description}
+          </p>
+          {alert.evidence?.ml_response?.score && (
+            <div className="mb-2 text-caption text-accent-cyan">
+              Confidence: {(alert.evidence.ml_response.score * 100).toFixed(0)}%
+            </div>
+          )}
+        </>
       )}
 
       <div className="flex items-center justify-between">
