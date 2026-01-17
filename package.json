@@ -1,0 +1,19 @@
+{
+  "name": "threat-ops-ai",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "cd frontend && npm install",
+    "dev:frontend": "cd frontend && VITE_USE_MOCK=false npm run dev",
+    "dev:ingest": "cd backend/ingest-service && source venv/bin/activate && python main.py",
+    "dev:gateway": "cd backend/api-gateway && source venv/bin/activate && python main.py",
+    "dev:detection": "cd backend/detection-engine && source venv/bin/activate && python main.py",
+    "dev:alert": "cd backend/alert-manager && source venv/bin/activate && python main.py",
+    "dev:response": "cd backend/response-engine && source venv/bin/activate && python main.py",
+    "dev:backend": "npx concurrently -k -c \"blue,magenta,cyan,yellow,red\" -n \"INGEST,GATEWAY,DETECT,ALERT,RESP\" \"npm run dev:ingest\" \"npm run dev:gateway\" \"npm run dev:detection\" \"npm run dev:alert\" \"npm run dev:response\"",
+    "dev": "npx concurrently -k -c \"green,blue\" -n \"FRONT,BACK\" \"npm run dev:frontend\" \"npm run dev:backend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

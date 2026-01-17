@@ -1,0 +1,54 @@
+[
+  {
+    "event_id": "test-001",
+    "source_ip": "192.168.1.100",
+    "domain": "healthcare",
+    "service": "patient-api",
+    "event_type": "http_request",
+    "payload": {
+      "method": "POST",
+      "path": "/api/login",
+      "query": "' OR 1=1; DROP TABLE users; --"
+    },
+    "timestamp": 1710000000
+  },
+  {
+    "event_id": "test-002",
+    "source_ip": "192.168.1.50",
+    "domain": "healthcare",
+    "service": "database",
+    "event_type": "system_metric",
+    "payload": {
+      "cpu": 92.5,
+      "memory": 78.0,
+      "network": 150
+    },
+    "timestamp": 1710000001
+  },
+  {
+    "event_id": "test-003",
+    "source_ip": "10.0.0.55",
+    "domain": "infrastructure",
+    "service": "auth-server",
+    "event_type": "auth_attempt",
+    "payload": {
+      "username": "admin",
+      "success": false,
+      "reason": "invalid_password"
+    },
+    "timestamp": 1710000002
+  },
+  {
+    "event_id": "test-004",
+    "source_ip": "192.168.1.200",
+    "domain": "healthcare",
+    "service": "api-gateway",
+    "event_type": "system_metric",
+    "payload": {
+      "cpu": 45.0,
+      "memory": 95.0,
+      "network": 1200
+    },
+    "timestamp": 1710000003
+  }
+]

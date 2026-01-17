@@ -1,0 +1,165 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   THREAT_OPS.AI - Base Styles
+   Dark-mode-first glassmorphism design system
+   ============================================ */
+
+@layer base {
+  html {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background-primary text-text-primary min-h-screen;
+  }
+
+  /* Custom scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-background-secondary;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-background-tertiary rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-muted;
+  }
+}
+
+@layer components {
+  /* Glassmorphism Panel */
+  .glass-panel {
+    @apply bg-surface-glass backdrop-blur-glass border border-white/5 rounded-panel shadow-glass;
+  }
+
+  .glass-panel-hover {
+    @apply glass-panel hover:bg-surface-glass-hover transition-colors duration-200;
+  }
+
+  /* Glassmorphism Card */
+  .glass-card {
+    @apply bg-surface-glass backdrop-blur-glass border border-white/5 rounded-glass shadow-glass;
+  }
+
+  .glass-card-hover {
+    @apply glass-card hover:bg-surface-glass-hover hover:border-white/10 transition-all duration-200;
+  }
+
+  /* Status badges */
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-caption font-medium;
+  }
+
+  .status-normal {
+    @apply bg-status-normal/10 text-status-normal;
+  }
+
+  .status-warning {
+    @apply bg-status-warning/10 text-status-warning;
+  }
+
+  .status-critical {
+    @apply bg-status-critical/10 text-status-critical animate-pulse-slow;
+  }
+
+  .status-info {
+    @apply bg-status-info/10 text-status-info;
+  }
+
+  /* Status indicators (dots) */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .status-dot-normal {
+    @apply status-dot bg-status-normal shadow-glow-green;
+  }
+
+  .status-dot-warning {
+    @apply status-dot bg-status-warning shadow-glow-amber;
+  }
+
+  .status-dot-critical {
+    @apply status-dot bg-status-critical shadow-glow-red animate-pulse;
+  }
+
+  /* Button styles */
+  .btn-primary {
+    @apply px-4 py-2 bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20
+           rounded-glass font-medium text-body
+           hover:bg-accent-cyan/20 hover:border-accent-cyan/40
+           active:bg-accent-cyan/30
+           transition-all duration-200;
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 bg-status-critical/10 text-status-critical border border-status-critical/20
+           rounded-glass font-medium text-body
+           hover:bg-status-critical/20 hover:border-status-critical/40
+           active:bg-status-critical/30
+           transition-all duration-200;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 text-text-secondary
+           rounded-glass font-medium text-body
+           hover:bg-surface-glass-hover hover:text-text-primary
+           active:bg-surface-glass-active
+           transition-all duration-200;
+  }
+
+  /* Section header */
+  .section-header {
+    @apply text-section text-text-primary font-medium mb-4;
+  }
+
+  /* Metric display */
+  .metric-value {
+    @apply text-3xl font-semibold tabular-nums;
+  }
+
+  .metric-label {
+    @apply text-caption text-text-muted uppercase tracking-wider;
+  }
+}
+
+@layer utilities {
+  /* Fade in animation */
+  .animate-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  /* Slide up animation */
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out forwards;
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    @apply bg-gradient-to-r from-accent-cyan to-accent-purple bg-clip-text text-transparent;
+  }
+
+  /* Glow effects */
+  .glow-green {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+  }
+
+  .glow-amber {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+  }
+
+  .glow-red {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+  }
+}

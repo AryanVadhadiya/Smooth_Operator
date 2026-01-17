@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threat_Ops: Cyber Attack Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: '#0f172a',
+                        neon: '#00ff41',
+                        danger: '#ff0033'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Courier New', monospace; }
+        .btn { transition: all 0.2s; }
+        .btn:active { transform: scale(0.95); }
+        .log-line { border-bottom: 1px solid #334155; padding: 4px 0; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-8">
+    <div class="w-full max-w-2xl bg-slate-900 rounded-xl border border-slate-700 shadow-2xl overflow-hidden">
+        <div class="bg-slate-800 p-6 border-b border-slate-700 flex justify-between items-center">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <span class="text-danger">☠️</span> Cyber Attack Console
+            </h1>
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-neon animate-pulse"></div>
+                <span class="text-xs text-slate-400">READY</span>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <div class="bg-black/30 p-4 rounded-lg border border-slate-700">
+                <label class="block text-xs uppercase tracking-wider text-slate-500 mb-2">Target Host</label>
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <input type="text" id="targetIp" value="http://localhost:5050"
+                               list="common-targets"
+                               class="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-neon focus:ring-1 focus:ring-neon outline-none"
+                               placeholder="http://192.168.1.X:5050">
+                        <datalist id="common-targets">
+                            <option value="http://localhost:5050">
+                            <option value="http://192.168.1.5:5050">
+                            <option value="http://192.168.1.6:5050">
+                        </datalist>
+                    </div>
+
+                    <button onclick="saveToHistory()" class="bg-slate-800 border border-slate-600 px-3 rounded text-slate-400 hover:text-white" title="Save to History">
+                        💾
+                    </button>
+
+                    <button onclick="checkConnection()" class="bg-slate-700 hover:bg-slate-600 px-4 rounded text-sm text-white font-bold btn">
+                        Ping
+                    </button>
+                </div>
+                <div id="targetHistory" class="flex flex-wrap gap-2 mt-3"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="launchAttack('sql')" class="group relative bg-slate-800 hover:bg-red-900/30 border border-slate-700 hover:border-red-500 p-4 rounded-lg flex flex-col items-center gap-2 btn">
+                    <span class="text-2xl">💉</span>
+                    <span class="font-bold text-red-400 group-hover:text-red-300">SQL Injection</span>
+                    <span class="text-xs text-slate-500">Injects 'OR 1=1' payload</span>
+                </button>
+
+                <button onclick="launchAttack('brute')" class="group relative bg-slate-800 hover:bg-orange-900/30 border border-slate-700 hover:border-orange-500 p-4 rounded-lg flex flex-col items-center gap-2 btn">
+                    <span class="text-2xl">🔨</span>
+                    <span class="font-bold text-orange-400 group-hover:text-orange-300">Brute Force</span>
+                    <span class="text-xs text-slate-500">Spams login attempts</span>
+                </button>
+
+                <button onclick="launchAttack('ddos')" class="group relative bg-slate-800 hover:bg-yellow-900/30 border border-slate-700 hover:border-yellow-500 p-4 rounded-lg flex flex-col items-center gap-2 btn">
+                    <span class="text-2xl">🌊</span>
+                    <span class="font-bold text-yellow-400 group-hover:text-yellow-300">Flooding</span>
+                    <span class="text-xs text-slate-500">Rapid fire requests</span>
+                </button>
+
+                <button onclick="launchAttack('scan')" class="group relative bg-slate-800 hover:bg-blue-900/30 border border-slate-700 hover:border-blue-500 p-4 rounded-lg flex flex-col items-center gap-2 btn">
+                    <span class="text-2xl">📡</span>
+                    <span class="font-bold text-blue-400 group-hover:text-blue-300">Port Scan</span>
+                    <span class="text-xs text-slate-500">Probes endpoints</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-black p-4 h-64 overflow-y-auto font-mono text-sm border-t border-slate-700" id="terminal">
+            <div class="text-slate-500">root@attacker:~$ initialized... waiting for target...</div>
+        </div>
+    </div>
+
+    <script>
+        const terminal = document.getElementById('terminal');
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderHistory();
+        });
+
+        function saveToHistory() {
+            const ip = document.getElementById('targetIp').value;
+            if (!ip) return;
+
+            let history = JSON.parse(localStorage.getItem('attacker_history') || '[]');
+            if (!history.includes(ip)) {
+                history.push(ip);
+                localStorage.setItem('attacker_history', JSON.stringify(history));
+                renderHistory();
+                log(`Saved ${ip} to history`, 'success');
+            }
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('targetHistory');
+            const history = JSON.parse(localStorage.getItem('attacker_history') || '[]');
+
+            container.innerHTML = history.map(ip => `
+                <span onclick="document.getElementById('targetIp').value = '${ip}'"
+                      class="cursor-pointer px-2 py-1 rounded bg-slate-800 border border-slate-600 text-xs text-slate-300 hover:border-neon hover:text-neon transition-colors">
+                    ${ip}
+                </span>
+            `).join('');
+        }
+
+        function log(msg, type = 'info') {
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            const timestamp = new Date().toLocaleTimeString();
+
+            let color = 'text-slate-300';
+            if (type === 'error') color = 'text-red-500';
+            if (type === 'success') color = 'text-neon';
+            if (type === 'warn') color = 'text-yellow-500';
+
+            line.innerHTML = `<span class="text-slate-600">[${timestamp}]</span> <span class="${color}">${msg}</span>`;
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        async function checkConnection() {
+            const target = document.getElementById('targetIp').value;
+            log(`Pinging target: ${target}...`, 'info');
+            try {
+                const res = await fetch(`${target}/`);
+                const data = await res.json();
+                log(`Target Locked: ${data.device} (${data.status})`, 'success');
+            } catch (err) {
+                log(`Connection failed: ${err.message}`, 'error');
+            }
+        }
+
+        async function launchAttack(type) {
+            const target = document.getElementById('targetIp').value;
+
+            if (type === 'sql') {
+                log(`Injecting SQL payload into ${target}/data ...`, 'warn');
+                try {
+                    await fetch(`${target}/data`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ query: "SELECT * FROM users WHERE id = 1 OR 1=1" })
+                    });
+                    log('Payload delivered successfully.', 'success');
+                } catch (e) { log(`Delivery failed: ${e.message}`, 'error'); }
+            }
+
+            if (type === 'brute') {
+                log(`Starting Brute Force on ${target}/login ...`, 'warn');
+                for(let i=0; i<5; i++) {
+                    fetch(`${target}/login`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ username: "admin", password: "password123" })
+                    }).then(r => {
+                        if(r.status === 401) log(`Attempt #${i+1} failed (Expected via detection)`, 'info');
+                    });
+                    await new Promise(r => setTimeout(r, 200));
+                }
+                log('Brute force sequence complete.', 'success');
+            }
+
+            if (type === 'ddos') {
+                log(`Flooding ${target} with requests...`, 'warn');
+                let count = 0;
+                const interval = setInterval(() => {
+                    fetch(`${target}/`);
+                    count++;
+                    if(count % 10 === 0) log(`Sent ${count} packets...`, 'info');
+                    if(count >= 50) {
+                        clearInterval(interval);
+                        log('Flood complete.', 'success');
+                    }
+                }, 50);
+            }
+
+            if (type === 'scan') {
+                log(`Probing network ports on ${target}...`, 'warn');
+                // Simulated scan
+                const ports = [21, 22, 80, 443, 8080];
+                for (const port of ports) {
+                     log(`Scanning port ${port}...`, 'info');
+                     await new Promise(r => setTimeout(r, 300));
+                }
+                log('Port scan complete. Found 2 open ports.', 'success');
+            }
+        }
+    </script>
+</body>
+</html>

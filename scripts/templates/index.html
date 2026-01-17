@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threat_Ops Monitor Agent</title>
+    <style>
+        body { font-family: monospace; background: #0f172a; color: #00ff41; padding: 2rem; }
+        .box { border: 1px solid #334155; padding: 2rem; max-width: 600px; margin: 0 auto; background: #1e293b; border-radius: 8px; }
+        h1 { margin-top: 0; color: #fff; }
+        .status { color: #00ff41; font-weight: bold; }
+        .config-form { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #334155; }
+        input { background: #0f172a; border: 1px solid #334155; color: #fff; padding: 0.5rem; width: 70%; }
+        button { background: #00ff41; border: none; padding: 0.5rem 1rem; color: #000; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>🛡️ Monitor Agent Active</h1>
+        <p>Device: <span id="device">Loading...</span></p>
+        <p>Status: <span class="status">ONLINE</span></p>
+        <p>Reporting to: <span id="server">Loading...</span></p>
+
+        <div class="config-form">
+            <h3>⚙️ Configuration</h3>
+            <p>Update Main Server IP:</p>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="serverIp" placeholder="192.168.1.X:8001">
+                <button onclick="updateConfig()">Update</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        fetch('/status').then(r => r.json()).then(data => {
+            document.getElementById('device').textContent = data.device;
+        });
+
+        fetch('/config').then(r => r.json()).then(data => {
+            const url = data.server_url;
+            document.getElementById('server').textContent = url;
+            try {
+                const ip = new URL(url).hostname;
+                document.getElementById('serverIp').value = ip;
+            } catch(e) {}
+        });
+
+        function updateConfig() {
+            const ip = document.getElementById('serverIp').value;
+            fetch('/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ server_ip: ip })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    alert('Server URL updated!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + JSON.stringify(data));
+                }
+            });
+        }
+    </script>
+</body>
+</html>
