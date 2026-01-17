@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Monitor - CyberThreat_Ops</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --bg-card: #ffffff;
+            --bg-hover: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --accent-primary: #3b82f6;
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --accent-info: #06b6d4;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header h1 {
+            font-size: 1.375rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header h1 span {
+            color: var(--accent-primary);
+        }
+
+        .back-btn {
+            padding: 0.6rem 1.25rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-title {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .devices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .device-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .device-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--accent-primary);
+        }
+
+        .device-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+        }
+
+        .device-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .device-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .device-id {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.375rem 0.75rem;
+            border-radius: 20px;
+        }
+
+        .status-badge.online {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-success);
+        }
+
+        .status-badge.offline {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--accent-danger);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .device-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .info-item {
+            background: var(--bg-tertiary);
+            padding: 0.875rem;
+            border-radius: 10px;
+        }
+
+        .info-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.375rem;
+            font-weight: 500;
+        }
+
+        .info-value {
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .info-value.success {
+            color: var(--accent-success);
+        }
+
+        .info-value.danger {
+            color: var(--accent-danger);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: var(--bg-tertiary);
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            line-height: 1;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .chart-container {
+            height: 280px;
+            margin-bottom: 1.5rem;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .detail-card {
+            background: var(--bg-tertiary);
+            padding: 1.25rem;
+            border-radius: 12px;
+        }
+
+        .detail-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-hover) 50%, var(--bg-tertiary) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        .skeleton-card {
+            height: 200px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .skeleton-line {
+            height: 16px;
+            margin-bottom: 0.75rem;
+        }
+
+        .skeleton-line.short {
+            width: 60%;
+        }
+
+        .skeleton-line.medium {
+            width: 80%;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <h1>📱 Device <span>Monitor</span></h1>
+        <a href="index.html" class="back-btn">← Back to Dashboard</a>
+    </header>
+
+    <div class="container">
+        <div class="page-title">
+            <span>Showing registered devices with real-time connectivity status</span>
+        </div>
+        <div id="devicesGrid" class="devices-grid">
+            <div class="skeleton-card">
+                <div class="skeleton skeleton-line short"></div>
+                <div class="skeleton skeleton-line medium"></div>
+                <div class="skeleton skeleton-line"></div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton skeleton-line short"></div>
+                <div class="skeleton skeleton-line medium"></div>
+                <div class="skeleton skeleton-line"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalOverlay" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Device Details</div>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="chart-container">
+                    <canvas id="latencyChart"></canvas>
+                </div>
+                <div class="detail-grid" id="modalDetails"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8001';
+        let latencyChart = null;
+        let chartUpdateInterval = null;
+
+        async function loadDevices() {
+            try {
+                const res = await fetch(`${API_URL}/devices-registered`);
+                const data = await res.json();
+                const devices = data.devices || [];
+                const grid = document.getElementById('devicesGrid');
+
+                if (devices.length === 0) {
+                    grid.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <div class="empty-state-icon">📱</div>
+                            <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">No devices registered</p>
+                            <p>Go to Dashboard → Tools to add devices</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const devicesWithStatus = await Promise.all(devices.map(async (device) => {
+                    try {
+                        const historyRes = await fetch(`${API_URL}/devices/${device.id}/history`);
+                        const historyData = await historyRes.json();
+                        if (historyData.history && historyData.history.length > 0) {
+                            const latest = historyData.history[historyData.history.length - 1];
+                            device.isConnected = latest.is_reachable === true;
+                            device.lastLatency = latest.network_latency || 0;
+                        } else {
+                            device.isConnected = false;
+                            device.lastLatency = 0;
+                        }
+                    } catch (err) {
+                        device.isConnected = false;
+                        device.lastLatency = 0;
+                    }
+                    return device;
+                }));
+
+                grid.innerHTML = devicesWithStatus.map(device => {
+                    const statusClass = device.isConnected ? 'online' : 'offline';
+                    const statusText = device.isConnected ? 'Connected' : 'Offline';
+                    const sectorIcon = {
+                        healthcare: '🏥',
+                        agriculture: '🌾',
+                        urban: '🏙️'
+                    }[device.sector] || '📡';
+
+                    return `
+                    <div class="device-card" onclick="openDeviceModal('${device.id}', '${device.ip_address}', '${device.type}', '${device.sector}', '${device.location}')">
+                        <div class="device-header">
+                            <div>
+                                <div class="device-icon">${sectorIcon}</div>
+                                <div class="device-name">${device.type || 'Unknown Device'}</div>
+                                <div class="device-id">ID: ${device.id}</div>
+                            </div>
+                            <div class="status-badge ${statusClass}">
+                                <span class="status-dot"></span>
+                                ${statusText}
+                            </div>
+                        </div>
+                        <div class="device-info">
+                            <div class="info-item">
+                                <div class="info-label">IP Address</div>
+                                <div class="info-value">${device.ip_address || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Sector</div>
+                                <div class="info-value">${device.sector}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Location</div>
+                                <div class="info-value">${device.location || 'Unknown'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Latency</div>
+                                <div class="info-value ${device.isConnected ? (device.lastLatency > 500 ? 'danger' : 'success') : ''}">
+                                    ${device.isConnected ? device.lastLatency.toFixed(0) + ' ms' : 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `}).join('');
+            } catch (err) {
+                console.error('Failed to load devices:', err);
+                document.getElementById('devicesGrid').innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-state-icon">⚠️</div>
+                        <p style="font-size: 1.1rem; font-weight: 600;">Connection Failed</p>
+                        <p>Make sure the API is running on port 8001</p>
+                    </div>
+                `;
+            }
+        }
+
+        function openDeviceModal(id, ip, type, sector, location) {
+            document.getElementById('modalOverlay').classList.add('active');
+            document.getElementById('modalTitle').textContent = `${type} (${id})`;
+
+            document.getElementById('modalDetails').innerHTML = `
+                <div class="detail-card">
+                    <div class="detail-label">IP Address</div>
+                    <div class="detail-value">${ip}</div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">Sector</div>
+                    <div class="detail-value">${sector}</div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">Location</div>
+                    <div class="detail-value">${location}</div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">Current Latency</div>
+                    <div class="detail-value" id="currentLatency">Loading...</div>
+                </div>
+            `;
+
+            initLatencyChart();
+            fetchLatencyData(id);
+            chartUpdateInterval = setInterval(() => fetchLatencyData(id), 2000);
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+            if (chartUpdateInterval) { clearInterval(chartUpdateInterval); chartUpdateInterval = null; }
+            if (latencyChart) { latencyChart.destroy(); latencyChart = null; }
+        }
+
+        function initLatencyChart() {
+            const ctx = document.getElementById('latencyChart').getContext('2d');
+            latencyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Latency (ms)',
+                        data: [],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 300 },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#64748b' } },
+                        y: { grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' }, beginAtZero: true }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        async function fetchLatencyData(deviceId) {
+            try {
+                const res = await fetch(`${API_URL}/devices/${deviceId}/history`);
+                const data = await res.json();
+                if (!latencyChart || !data.history) return;
+
+                const labels = data.history.map((_, i) => i + 1);
+                const latencies = data.history.map(h => h.network_latency || 0);
+
+                latencyChart.data.labels = labels;
+                latencyChart.data.datasets[0].data = latencies;
+                latencyChart.update('none');
+
+                const current = latencies[latencies.length - 1];
+                const el = document.getElementById('currentLatency');
+                if (el) {
+                    el.textContent = `${current?.toFixed(1) || '--'} ms`;
+                    el.style.color = current > 500 ? '#ef4444' : '#10b981';
+                }
+            } catch (err) { console.error('Latency fetch error:', err); }
+        }
+
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeModal();
+        });
+
+        loadDevices();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,71 @@
+{
+  "1": {
+    "id": "1",
+    "type": "123",
+    "sector": "healthcare",
+    "location": "1232",
+    "ip_address": "12312232",
+    "firmware_version": "13223",
+    "metadata": {
+      "gps": {
+        "latitude": 1312,
+        "longitude": 213
+      }
+    },
+    "status": "active",
+    "registered_at": "2026-01-17T11:16:59.522892",
+    "is_simulated": false,
+    "last_seen": "2026-01-17T11:16:59.523884"
+  },
+  "01": {
+    "id": "01",
+    "type": "laptop",
+    "sector": "urban",
+    "location": "gict209",
+    "ip_address": "172.20.10.7",
+    "firmware_version": "0.0.1",
+    "metadata": {
+      "gps": {
+        "latitude": 234,
+        "longitude": 12341
+      }
+    },
+    "status": "active",
+    "registered_at": "2026-01-17T11:18:23.584588",
+    "is_simulated": false
+  },
+  "02": {
+    "id": "02",
+    "type": "hets_laptop_2",
+    "sector": "agriculture",
+    "location": "gitc20u",
+    "ip_address": "10.110.5.149",
+    "firmware_version": "0.01",
+    "metadata": {
+      "gps": {
+        "latitude": 12,
+        "longitude": 23
+      }
+    },
+    "status": "active",
+    "registered_at": "2026-01-17T11:30:28.758827",
+    "is_simulated": false
+  },
+  "03": {
+    "id": "03",
+    "type": "aryans_laptop",
+    "sector": "agriculture",
+    "location": "gict208",
+    "ip_address": "10.110.5.98",
+    "firmware_version": "123",
+    "metadata": {
+      "gps": {
+        "latitude": 123,
+        "longitude": 123
+      }
+    },
+    "status": "active",
+    "registered_at": "2026-01-17T11:41:47.411633",
+    "is_simulated": false
+  }
+}

@@ -1,0 +1,120 @@
+system:
+  name: "CyberThreat_Ops"
+  version: "1.0.0"
+  description: "Cyber-Resilient Infrastructure Monitoring System"
+
+sectors:
+  - name: "healthcare"
+    enabled: true
+    priority: "critical"
+    regulations: ["HIPAA", "HITECH", "GDPR"]
+    
+  - name: "agriculture"
+    enabled: true
+    priority: "high"
+    regulations: ["FDA", "USDA"]
+    
+  - name: "urban"
+    enabled: true
+    priority: "critical"
+    regulations: ["NIST", "IEC62443", "NERC-CIP"]
+
+monitoring:
+  collection_interval: 5  # seconds
+  retention_days: 90
+  metrics:
+    - cpu_usage
+    - memory_usage
+    - network_traffic
+    - disk_io
+    - authentication_events
+    - api_calls
+    - system_errors
+
+detection:
+  algorithms:
+    - name: "isolation_forest"
+      enabled: true
+      contamination: 0.1
+      
+    - name: "statistical_zscore"
+      enabled: true
+      threshold: 3.0
+      
+    - name: "lstm_autoencoder"
+      enabled: true
+      sequence_length: 50
+      threshold: 0.8
+      
+    - name: "moving_average"
+      enabled: true
+      window_size: 20
+      std_multiplier: 2.5
+
+alert_levels:
+  P0:
+    name: "Critical"
+    response_time: 5  # minutes
+    notification_channels: ["email", "sms", "slack", "voice"]
+    auto_escalate: true
+    
+  P1:
+    name: "High"
+    response_time: 15
+    notification_channels: ["email", "slack"]
+    auto_escalate: true
+    
+  P2:
+    name: "Medium"
+    response_time: 60
+    notification_channels: ["email", "slack"]
+    auto_escalate: false
+    
+  P3:
+    name: "Low"
+    response_time: 240
+    notification_channels: ["email"]
+    auto_escalate: false
+    
+  P4:
+    name: "Informational"
+    response_time: 1440
+    notification_channels: ["email"]
+    auto_escalate: false
+
+response_actions:
+  - name: "isolate_device"
+    severity_threshold: "P1"
+    requires_approval: true
+    rollback_capable: true
+    
+  - name: "block_ip"
+    severity_threshold: "P2"
+    requires_approval: false
+    rollback_capable: true
+    
+  - name: "rate_limit"
+    severity_threshold: "P2"
+    requires_approval: false
+    rollback_capable: true
+    
+  - name: "rotate_credentials"
+    severity_threshold: "P1"
+    requires_approval: true
+    rollback_capable: false
+    
+  - name: "service_restart"
+    severity_threshold: "P1"
+    requires_approval: true
+    rollback_capable: true
+    
+  - name: "snapshot_system"
+    severity_threshold: "P0"
+    requires_approval: false
+    rollback_capable: false
+
+dashboard:
+  refresh_interval: 5  # seconds
+  default_time_range: 3600  # seconds (1 hour)
+  max_alerts_display: 100
+  enable_dark_mode: true

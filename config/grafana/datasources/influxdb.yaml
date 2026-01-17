@@ -1,0 +1,15 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    jsonData:
+      version: Flux
+      organization: cyberops
+      defaultBucket: monitoring
+      tlsSkipVerify: true
+    secureJsonData:
+      token: cyberops-token-2026
+    isDefault: true

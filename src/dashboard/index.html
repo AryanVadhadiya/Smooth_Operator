@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberThreat_Ops - Security Dashboard</title>
+    <meta name="description" content="Real-time cyber threat monitoring for critical infrastructure">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --accent-primary: #3b82f6;
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --accent-purple: #8b5cf6;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .logo h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .logo span {
+            color: var(--accent-primary);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--bg-tertiary);
+            padding: 3px;
+            border-radius: 8px;
+        }
+
+        .nav-tab {
+            padding: 0.4rem 1rem;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-tab.active {
+            background: var(--bg-secondary);
+            color: var(--accent-primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.75rem;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 16px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--accent-success);
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent-success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 57px);
+            overflow: hidden;
+        }
+
+        .tab-content {
+            display: none;
+            width: 100%;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* Left Panel - Metrics & Charts */
+        .left-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+            border-right: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        /* Right Panel - Alerts */
+        .right-panel {
+            width: 480px;
+            overflow-y: auto;
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .panel-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .alert-count-badge {
+            background: var(--accent-danger);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+        }
+
+        /* Stats Grid */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .stat-card {
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            padding: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .stat-card.green::before {
+            background: var(--accent-success);
+        }
+
+        .stat-card.red::before {
+            background: var(--accent-danger);
+        }
+
+        .stat-card.blue::before {
+            background: var(--accent-primary);
+        }
+
+        .stat-card.purple::before {
+            background: var(--accent-purple);
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+            margin-bottom: 0.375rem;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        /* Charts */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .chart-card {
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .chart-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .chart-container {
+            height: 180px;
+        }
+
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .chart-card.full-width .chart-container {
+            height: 160px;
+        }
+
+        /* Action Buttons */
+        .actions-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        /* Alerts List */
+        .alerts-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.75rem;
+        }
+
+        .alert-item {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 0.625rem;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .alert-item:hover {
+            border-color: var(--accent-primary);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+
+        .alert-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            border-radius: 10px 0 0 10px;
+        }
+
+        .alert-item.p0::before {
+            background: var(--accent-danger);
+        }
+
+        .alert-item.p1::before {
+            background: #fb923c;
+        }
+
+        .alert-item.p2::before {
+            background: var(--accent-warning);
+        }
+
+        .alert-item.p3::before {
+            background: var(--accent-primary);
+        }
+
+        .alert-item.p4::before {
+            background: var(--text-muted);
+        }
+
+        .alert-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .alert-severity {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .alert-severity.p0 {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-danger);
+        }
+
+        .alert-severity.p1 {
+            background: rgba(251, 146, 60, 0.15);
+            color: #ea580c;
+        }
+
+        .alert-severity.p2 {
+            background: rgba(245, 158, 11, 0.15);
+            color: #d97706;
+        }
+
+        .alert-severity.p3 {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent-primary);
+        }
+
+        .alert-severity.p4 {
+            background: rgba(148, 163, 184, 0.15);
+            color: var(--text-muted);
+        }
+
+        .alert-time {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .alert-device {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .alert-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            margin-bottom: 0.5rem;
+        }
+
+        .alert-tags {
+            display: flex;
+            gap: 0.375rem;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            font-size: 0.65rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .tag.sector {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-primary);
+        }
+
+        .tag.score {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--accent-danger);
+        }
+
+        .tag.detector {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--accent-purple);
+        }
+
+        .view-more {
+            font-size: 0.7rem;
+            color: var(--accent-primary);
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        /* Alert Detail Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 560px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: var(--bg-tertiary);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .detail-section {
+            margin-bottom: 1.25rem;
+        }
+
+        .detail-section-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .detail-item {
+            background: var(--bg-tertiary);
+            padding: 0.875rem;
+            border-radius: 8px;
+        }
+
+        .detail-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .detail-value.danger {
+            color: var(--accent-danger);
+        }
+
+        .detail-value.success {
+            color: var(--accent-success);
+        }
+
+        .detector-votes {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .vote-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+        }
+
+        .vote-name {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .vote-status {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .vote-status.detected {
+            color: var(--accent-danger);
+        }
+
+        .vote-status.normal {
+            color: var(--accent-success);
+        }
+
+        .modal-actions {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        /* Tools Tab */
+        .tools-container {
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+            align-content: start;
+        }
+
+        .tool-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .tool-card h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 0.65rem 0.875rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.5;
+        }
+
+        /* Alerts Sections */
+        .alerts-section {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-header {
+            padding: 0.875rem 1rem;
+            background: var(--bg-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .section-header:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .section-icon {
+            font-size: 1rem;
+        }
+
+        .section-toggle {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+
+        .section-content {
+            max-height: 400px;
+            overflow-y: auto;
+            transition: max-height 0.3s ease;
+        }
+
+        .section-content.collapsed {
+            max-height: 0;
+            overflow: hidden;
+        }
+
+        .closed-badge {
+            background: var(--accent-success) !important;
+        }
+
+        .closed-section .alerts-list {
+            background: var(--bg-tertiary);
+        }
+
+        .closed-section .alert-item {
+            opacity: 0.8;
+        }
+
+        .closed-section .alert-item::before {
+            background: var(--accent-success) !important;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .right-panel {
+                width: 380px;
+            }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .tools-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .right-panel {
+                width: 100%;
+                height: 50vh;
+            }
+
+            .left-panel {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">🛡️</div>
+            <h1>CyberThreat<span>_Ops</span></h1>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" data-tab="dashboard">📊 Dashboard</button>
+            <button class="nav-tab" data-tab="tools">🛠️ Tools</button>
+        </div>
+
+        <div class="header-right">
+            <div class="live-badge">
+                <div class="live-dot"></div>
+                Live
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="left-panel">
+                <div class="stats-row">
+                    <div class="stat-card green">
+                        <div class="stat-label">System Status</div>
+                        <div class="stat-value" id="systemStatus">Online</div>
+                    </div>
+                    <div class="stat-card red">
+                        <div class="stat-label">Active Alerts</div>
+                        <div class="stat-value" id="activeAlerts">0</div>
+                    </div>
+                    <div class="stat-card blue">
+                        <div class="stat-label">Devices</div>
+                        <div class="stat-value" id="totalDevices">0</div>
+                    </div>
+                    <div class="stat-card purple">
+                        <div class="stat-label">Models</div>
+                        <div class="stat-value" id="modelsTrained">0/3</div>
+                    </div>
+                </div>
+
+                <div class="actions-row">
+                    <button class="btn btn-primary" onclick="refreshData()">⟳ Refresh</button>
+                    <button class="btn btn-secondary" onclick="window.location.href='devices.html'">📱 Devices</button>
+                    <button class="btn btn-secondary" onclick="trainAllModels()">🧠 Train Models</button>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-title">📊 Severity Distribution</div>
+                        <div class="chart-container">
+                            <canvas id="severityChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">🏭 Alerts by Sector</div>
+                        <div class="chart-container">
+                            <canvas id="sectorChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card full-width">
+                        <div class="chart-title">📈 24-Hour Timeline</div>
+                        <div class="chart-container">
+                            <canvas id="timelineChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <!-- Incoming Alerts Section -->
+                <div class="alerts-section">
+                    <div class="section-header" onclick="toggleSection('incoming')">
+                        <div class="section-title">
+                            <span class="section-icon">🚨</span>
+                            Incoming Alerts
+                            <span class="alert-count-badge" id="alertCountBadge">0</span>
+                        </div>
+                        <span class="section-toggle" id="incomingToggle">▼</span>
+                    </div>
+                    <div id="incomingSection" class="section-content">
+                        <div id="alertsList" class="alerts-list">
+                            <div class="empty-state">
+                                <div class="empty-icon">✅</div>
+                                <p>No active alerts</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Closed/Acknowledged Alerts Section -->
+                <div class="alerts-section closed-section">
+                    <div class="section-header" onclick="toggleSection('closed')">
+                        <div class="section-title">
+                            <span class="section-icon">✓</span>
+                            Closed Alerts
+                            <span class="alert-count-badge closed-badge" id="closedCountBadge">0</span>
+                        </div>
+                        <span class="section-toggle" id="closedToggle">▼</span>
+                    </div>
+                    <div id="closedSection" class="section-content">
+                        <div id="closedAlertsList" class="alerts-list">
+                            <div class="empty-state">
+                                <div class="empty-icon">📭</div>
+                                <p>No closed alerts</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tools Tab -->
+        <div id="tools" class="tab-content">
+            <div class="tools-container">
+                <div class="tool-card">
+                    <h3>🧠 Train Models</h3>
+                    <div class="form-group">
+                        <label class="form-label">Sector</label>
+                        <select class="form-select" id="trainSector">
+                            <option value="healthcare">Healthcare</option>
+                            <option value="agriculture">Agriculture</option>
+                            <option value="urban">Urban</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Samples</label>
+                        <input type="number" class="form-input" id="trainSamples" value="500">
+                    </div>
+                    <button class="btn btn-primary" onclick="trainModel()">Train Model</button>
+                </div>
+
+                <div class="tool-card">
+                    <h3>⚔️ Simulate Attack</h3>
+                    <div class="form-group">
+                        <label class="form-label">Sector</label>
+                        <select class="form-select" id="attackSector">
+                            <option value="healthcare">Healthcare</option>
+                            <option value="agriculture">Agriculture</option>
+                            <option value="urban">Urban</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Attack Type</label>
+                        <select class="form-select" id="attackType">
+                            <option value="ddos">DDoS Attack</option>
+                            <option value="ransomware">Ransomware</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" style="background:#ef4444"
+                        onclick="simulateAttack()">Launch</button>
+                </div>
+
+                <div class="tool-card">
+                    <h3>➕ Register Device</h3>
+                    <div class="form-group">
+                        <label class="form-label">Device ID</label>
+                        <input type="text" class="form-input" id="deviceId" placeholder="DEV-001">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">IP Address</label>
+                        <input type="text" class="form-input" id="deviceIp" placeholder="192.168.1.100">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sector</label>
+                        <select class="form-select" id="deviceSector">
+                            <option value="healthcare">Healthcare</option>
+                            <option value="agriculture">Agriculture</option>
+                            <option value="urban">Urban</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="registerDevice()">Register</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Detail Modal -->
+    <div id="alertModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Alert Details</div>
+                <button class="modal-close" onclick="closeAlertModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeAlertModal()">Close</button>
+                <button class="btn btn-primary" id="ackBtn" onclick="acknowledgeAlert()">✓ Acknowledge</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8001';
+        let severityChart, sectorChart, timelineChart;
+        let alertsData = [];
+        let closedAlertsData = [];
+        let currentAlertId = null;
+        let currentAlertType = 'incoming';
+
+        // Toggle section collapse
+        function toggleSection(section) {
+            const content = document.getElementById(section + 'Section');
+            const toggle = document.getElementById(section + 'Toggle');
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggle.textContent = '▼';
+            } else {
+                content.classList.add('collapsed');
+                toggle.textContent = '▶';
+            }
+        }
+
+        // Tab switching
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Initialize charts
+        function initCharts() {
+            const barCtx = document.getElementById('severityChart').getContext('2d');
+            severityChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Critical', 'High', 'Medium', 'Low', 'Info'],
+                    datasets: [{ data: [0, 0, 0, 0, 0], backgroundColor: ['#ef4444', '#fb923c', '#f59e0b', '#3b82f6', '#94a3b8'], borderRadius: 6, borderSkipped: false }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#e2e8f0' } } } }
+            });
+
+            const doughnutCtx = document.getElementById('sectorChart').getContext('2d');
+            sectorChart = new Chart(doughnutCtx, {
+                type: 'doughnut',
+                data: { labels: ['Healthcare', 'Agriculture', 'Urban'], datasets: [{ data: [0, 0, 0], backgroundColor: ['#3b82f6', '#10b981', '#8b5cf6'], borderWidth: 0, cutout: '60%' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15, font: { size: 11 } } } } }
+            });
+
+            const lineCtx = document.getElementById('timelineChart').getContext('2d');
+            timelineChart = new Chart(lineCtx, {
+                type: 'line',
+                data: { labels: Array.from({ length: 24 }, (_, i) => `${i}:00`), datasets: [{ data: Array(24).fill(0), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointRadius: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }, y: { beginAtZero: true, grid: { color: '#e2e8f0' } } } }
+            });
+        }
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch(`${API_URL}/system/status`);
+                const data = await res.json();
+                document.getElementById('systemStatus').textContent = data.status === 'operational' ? 'Online' : 'Offline';
+                document.getElementById('activeAlerts').textContent = data.alerts.active;
+                document.getElementById('totalDevices').textContent = data.devices.healthcare + data.devices.agriculture + data.devices.urban;
+                const trained = Object.values(data.models_trained).filter(v => v).length;
+                document.getElementById('modelsTrained').textContent = `${trained}/3`;
+
+                const sev = data.alerts.by_severity;
+                severityChart.data.datasets[0].data = [sev.P0 || 0, sev.P1 || 0, sev.P2 || 0, sev.P3 || 0, sev.P4 || 0];
+                severityChart.update('none');
+            } catch (err) { document.getElementById('systemStatus').textContent = 'Offline'; }
+        }
+
+        async function fetchAlerts() {
+            try {
+                // Fetch active (incoming) alerts - increased limit to 100
+                const res = await fetch(`${API_URL}/alerts?limit=100`);
+                const data = await res.json();
+                alertsData = data.alerts;
+                // Show actual displayed count, not total from API
+                document.getElementById('alertCountBadge').textContent = data.alerts.length;
+
+                const sectorCounts = { healthcare: 0, agriculture: 0, urban: 0 };
+                data.alerts.forEach(a => { if (sectorCounts[a.sector] !== undefined) sectorCounts[a.sector]++; });
+                sectorChart.data.datasets[0].data = [sectorCounts.healthcare, sectorCounts.agriculture, sectorCounts.urban];
+                sectorChart.update('none');
+
+                if (data.alerts.length === 0) {
+                    document.getElementById('alertsList').innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><p>No active alerts</p></div>`;
+                } else {
+                    document.getElementById('alertsList').innerHTML = data.alerts.map((alert, idx) => `
+                        <div class="alert-item ${alert.severity.toLowerCase()}" onclick="openAlertDetail(${idx}, 'incoming')">
+                            <div class="alert-top">
+                                <span class="alert-severity ${alert.severity.toLowerCase()}">${alert.severity}</span>
+                                <span class="alert-time">${new Date(alert.timestamp).toLocaleTimeString()}</span>
+                            </div>
+                            <div class="alert-device">${alert.device_id} • ${alert.device_type}</div>
+                            <div class="alert-desc">${alert.description.substring(0, 100)}${alert.description.length > 100 ? '...' : ''}</div>
+                            <div class="alert-tags">
+                                <span class="tag sector">${alert.sector}</span>
+                                <span class="tag score">${(alert.anomaly_score * 100).toFixed(0)}%</span>
+                            </div>
+                            <div class="view-more">View details →</div>
+                        </div>
+                    `).join('');
+                }
+
+                // Fetch acknowledged (closed) alerts
+                const closedRes = await fetch(`${API_URL}/alerts/acknowledged?limit=20`);
+                const closedData = await closedRes.json();
+                closedAlertsData = closedData.alerts;
+                document.getElementById('closedCountBadge').textContent = closedData.count;
+
+                if (closedData.alerts.length === 0) {
+                    document.getElementById('closedAlertsList').innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>No closed alerts</p></div>`;
+                } else {
+                    document.getElementById('closedAlertsList').innerHTML = closedData.alerts.map((alert, idx) => `
+                        <div class="alert-item ${alert.severity.toLowerCase()}" onclick="openAlertDetail(${idx}, 'closed')">
+                            <div class="alert-top">
+                                <span class="alert-severity ${alert.severity.toLowerCase()}">${alert.severity}</span>
+                                <span class="alert-time">Closed ${new Date(alert.acknowledged_at).toLocaleTimeString()}</span>
+                            </div>
+                            <div class="alert-device">${alert.device_id} • ${alert.device_type}</div>
+                            <div class="alert-desc">${alert.description.substring(0, 80)}${alert.description.length > 80 ? '...' : ''}</div>
+                            <div class="alert-tags">
+                                <span class="tag sector">${alert.sector}</span>
+                                <span class="tag detector">✓ Acknowledged</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) { console.error('Alerts error:', err); }
+        }
+
+        function openAlertDetail(idx, type = 'incoming') {
+            const alertList = type === 'closed' ? closedAlertsData : alertsData;
+            const alert = alertList[idx];
+            if (!alert) return;
+
+            currentAlertId = alert.alert_id;
+            currentAlertType = type;
+
+            // Handle acknowledge button based on alert type
+            const ackBtn = document.getElementById('ackBtn');
+            if (type === 'closed') {
+                ackBtn.textContent = '✓ Already Acknowledged';
+                ackBtn.disabled = true;
+                ackBtn.style.background = '#10b981';
+            } else {
+                ackBtn.textContent = '✓ Acknowledge';
+                ackBtn.disabled = false;
+                ackBtn.style.background = '';
+            }
+
+            document.getElementById('modalTitle').textContent = `Alert: ${alert.device_id} • ${alert.device_type}`;
+            document.getElementById('modalBody').innerHTML = `
+                <div class="detail-section">
+                    <div class="detail-section-title">Alert Information</div>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Severity</div>
+                            <div class="detail-value danger">${alert.severity} - ${alert.severity_name || 'Critical'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Anomaly Score</div>
+                            <div class="detail-value danger">${(alert.anomaly_score * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Timestamp</div>
+                            <div class="detail-value">${new Date(alert.timestamp).toLocaleString()}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Status</div>
+                            <div class="detail-value">${alert.status || 'Active'}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-section-title">Device Information</div>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Device ID</div>
+                            <div class="detail-value">${alert.device_id}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Device Type</div>
+                            <div class="detail-value">${alert.device_type}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Sector</div>
+                            <div class="detail-value">${alert.sector}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Alert ID</div>
+                            <div class="detail-value" style="font-size:0.75rem">${alert.alert_id}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-section-title">Detector Votes</div>
+                    <div class="detector-votes">
+                        ${Object.entries(alert.detector_votes || {}).map(([name, vote]) => `
+                            <div class="vote-item">
+                                <span class="vote-name">${name}</span>
+                                <span class="vote-status ${vote ? 'detected' : 'normal'}">${vote ? '🚨 Anomaly' : '✓ Normal'}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-section-title">Full Description</div>
+                    <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5">${alert.description}</p>
+                </div>
+            `;
+            document.getElementById('alertModal').classList.add('active');
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alertModal').classList.remove('active');
+            currentAlertId = null;
+        }
+
+        async function acknowledgeAlert() {
+            if (!currentAlertId) return;
+            try {
+                const btn = document.getElementById('ackBtn');
+                btn.textContent = 'Acknowledging...';
+                btn.disabled = true;
+
+                const res = await fetch(`${API_URL}/alerts/${currentAlertId}/acknowledge`, { method: 'POST' });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    btn.textContent = '✓ Acknowledged';
+                    btn.style.background = '#10b981';
+                    setTimeout(() => {
+                        closeAlertModal();
+                        refreshData();
+                    }, 1000);
+                } else {
+                    throw new Error(data.detail || 'Failed');
+                }
+            } catch (err) {
+                alert('Failed to acknowledge: ' + err.message);
+                const btn = document.getElementById('ackBtn');
+                btn.textContent = '✓ Acknowledge';
+                btn.disabled = false;
+            }
+        }
+
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAlertModal(); });
+
+        async function trainModel() {
+            const sector = document.getElementById('trainSector').value;
+            const samples = document.getElementById('trainSamples').value;
+            await fetch(`${API_URL}/train/${sector}?num_samples=${samples}`, { method: 'POST' });
+            alert(`Training completed for ${sector}!`);
+            refreshData();
+        }
+
+        async function trainAllModels() {
+            for (const s of ['healthcare', 'agriculture', 'urban']) {
+                await fetch(`${API_URL}/train/${s}?num_samples=500`, { method: 'POST' });
+            }
+            alert('All models trained!');
+            refreshData();
+        }
+
+        async function simulateAttack() {
+            const sector = document.getElementById('attackSector').value;
+            const type = document.getElementById('attackType').value;
+            await fetch(`${API_URL}/simulate-attack`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sector, attack_type: type, num_samples: 10 }) });
+            alert('Attack simulated!');
+            refreshData();
+        }
+
+        async function registerDevice() {
+            const id = document.getElementById('deviceId').value;
+            const ip = document.getElementById('deviceIp').value;
+            const sector = document.getElementById('deviceSector').value;
+            if (!id || !ip) { alert('Fill all fields'); return; }
+            await fetch(`${API_URL}/devices/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ device_id: id, device_type: 'custom', sector, ip_address: ip, location: 'Custom' }) });
+            alert(`Device ${id} registered!`);
+            refreshData();
+        }
+
+        function refreshData() { fetchStatus(); fetchAlerts(); }
+
+        initCharts();
+        refreshData();
+        setInterval(refreshData, 5000);
+    </script>
+</body>
+
+</html>
