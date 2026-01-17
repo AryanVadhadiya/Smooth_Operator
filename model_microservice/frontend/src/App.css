@@ -1,0 +1,68 @@
+/* App-specific overrides and additions */
+
+/* Ensure proper grid layout on all screens */
+@media (max-width: 1200px) {
+  .threat-log {
+    grid-column: 1 / -1;
+  }
+  
+  .network-chart {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Offline status indicator */
+.status-dot.offline {
+  background: var(--neon-red);
+  box-shadow: 0 0 10px var(--neon-red);
+  animation: none;
+}
+
+/* Additional hover effects for interactivity */
+.sector-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-glow);
+  box-shadow: 0 10px 40px rgba(0, 255, 65, 0.1);
+}
+
+.sector-card.critical:hover {
+  transform: none;
+}
+
+/* Refined scrollbar for all elements */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--neon-green-dim);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neon-green);
+}
+
+/* Tooltip styling for charts */
+.recharts-tooltip-wrapper {
+  outline: none;
+}
+
+/* Animation for new log entries */
+.log-entry:first-child {
+  animation: highlightNew 1s ease-out;
+}
+
+@keyframes highlightNew {
+  from {
+    background: rgba(0, 255, 65, 0.1);
+  }
+  to {
+    background: transparent;
+  }
+}
