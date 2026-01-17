@@ -22,8 +22,10 @@ Threat_Ops.ai is a comprehensive, microservices-based **Security Orchestration, 
 ## 🏗️ System Architecture
 
 The system follows a modular microservices architecture, ensuring scalability and isolation.
+<img width="1280" height="679" alt="image" src="https://github.com/user-attachments/assets/8c38d68c-1483-407c-955f-6116ced76add" />
 
-![Architecture Diagram](docs/images/architecture-diagram.png)
+**How the engine works
+**![Architecture Diagram](docs/images/architecture-diagram.png)
 
 ### Core Components
 
