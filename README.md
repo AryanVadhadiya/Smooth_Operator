@@ -131,6 +131,8 @@ Deploy the entire stack to a Kubernetes cluster using the provided scripts and m
 kubectl get pods
 kubectl get services
 ```
+<img width="1452" height="913" alt="image" src="https://github.com/user-attachments/assets/beb6c58b-5d39-45f4-a92d-5c351af156bf" />
+
 
 The frontend will be available at the NodePort or LoadBalancer IP specified in `k8s/frontend.yaml`.
 
