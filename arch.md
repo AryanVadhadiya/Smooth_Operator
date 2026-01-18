@@ -1,7 +1,7 @@
 # Current System Architecture
 ## Cyber-Resilient Infrastructure - As Implemented
 
-**Last Updated**: January 18, 2026 (Updated: Architecture aligned with actual implementation)  
+**Last Updated**: January 18, 2026  
 **Project**: Threat_Ops.ai - Cyber Security Monitoring System
 
 ---
@@ -13,94 +13,110 @@ This is the **actual implemented architecture** of your cyber-resilient infrastr
 ### **Current Architecture Diagram**
 
 ```mermaid
-flowchart TB
-    subgraph External["🌐 External Clients & Attack Simulators"]
-        Browser["Web Browser<br/>Dashboard Users"]
-        SystemApp["SystemApp<br/>Monitor Devices<br/>(Flask Web Server)"]
-        AttackSim["Attack Simulator<br/>(Python Scripts)"]
+flowchart LR
+    %% Styles
+    classDef box fill:#fff,stroke:#333,stroke-width:1px;
+    classDef blueBox fill:#E3F2FD,stroke:#1976D2,stroke-width:2px;
+    classDef purpleBox fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px;
+    classDef orangeBox fill:#FFF3E0,stroke:#F57C00,stroke-width:2px;
+    classDef greenBox fill:#E8F5E9,stroke:#388E3C,stroke-width:2px;
+    classDef yellowBox fill:#FFF9C4,stroke:#F9A825,stroke-width:2px;
+    
+    %% Nodes / Node Side Software
+    subgraph Nodes["🌐 Nodes"]
+        direction TB
+        SystemApp["SystemApp<br/>Monitor Node"]
+        Browser["Web Browser"]
     end
     
-    subgraph Frontend["💻 Frontend Layer"]
-        Dashboard["React Dashboard<br/>Vite + Tailwind CSS<br/>Port: 5173"]
-        DashboardAPI["API Service<br/>(HTTP Client)"]
-        DashboardSocket["Socket.io Client<br/>(Real-time)"]
+    %% Frontend Monitoring
+    subgraph Frontend["💻 FRONTEND MONITORING"]
+        direction TB
+        AttackSim["Attack<br/>Simulator"]
+        ReactDash["React Dashboard<br/>Port: 5173<br/>Vite + Tailwind"]
     end
     
-    subgraph Gateway["🚪 API Gateway"]
-        APIGateway["API Gateway<br/>FastAPI + Socket.io<br/>Port: 3001"]
+    %% Gateway
+    subgraph GatewayBox["GATEWAY"]
+        APIGateway["API Gateway<br/>Port: 3001<br/>FastAPI + Socket.io"]
     end
     
-    subgraph Backend["⚙️ Backend Microservices"]
-        Ingest["Ingest Service<br/>FastAPI + Socket.io<br/>Port: 8001<br/>• File Storage (events.json)<br/>• Schema Validation"]
+    %% Backend Services
+    subgraph Backend["BACKEND SERVICES"]
+        direction LR
+        Ingest["Ingest Service<br/>Port: 8001"]
+        Detection["Detection Engine<br/>Port: 8002"]
+        Alert["Alert Manager<br/>Port: 8003"]
+        Response["Response Engine<br/>Port: 8004"]
         
-        Detection["Detection Engine<br/>FastAPI<br/>Port: 8002<br/>• Rule Engine<br/>• Anomaly Detection<br/>• Pattern Matching"]
-        
-        Alert["Alert Manager<br/>FastAPI<br/>Port: 8003<br/>• Alert Templates<br/>• Correlation<br/>• Deduplication"]
-        
-        Response["Response Engine<br/>FastAPI<br/>Port: 8004<br/>• Playbook Execution<br/>• IP Blocking<br/>• Service Isolation"]
+        %% Model Service Addition
+        ModelService["Model Microservice<br/>Port: 5001"]
     end
-    
-    subgraph MLCluster["🤖 ML Backend Cluster"]
-        ModelService["Model Microservice<br/>Flask<br/>Port: 5001<br/>• ML Models<br/>• Attack Simulation<br/>• Training Pipeline"]
-    end
-    
-    subgraph Storage["💾 Data Storage"]
-        EventStore["events.json<br/>(Telemetry Events)"]
-        InMemory["In-Memory State<br/>• Alerts<br/>• Blocked IPs<br/>• Action Logs"]
-        MLModels["ML Models<br/>• Trained Models<br/>• Model Artifacts"]
-    end
-    
-    %% External Connections
-    Browser --> Dashboard
-    SystemApp -->|POST /ingest| Ingest
-    AttackSim -->|POST /ingest| Ingest
-    
-    %% Frontend Connections
-    Dashboard --> DashboardAPI
-    Dashboard --> DashboardSocket
-    DashboardAPI -->|HTTP| APIGateway
-    DashboardSocket -->|WebSocket| APIGateway
-    
-    %% Gateway Routing
-    APIGateway <-->|WebSocket Events| Ingest
-    APIGateway -->|Broadcast Alerts| DashboardSocket
-    
-    %% Backend Service Chain
-    Ingest -->|POST /analyze| Detection
-    Detection -->|POST /create| Alert
-    Alert -->|POST /execute| Response
-    
-    %% ML Integration
-    Detection -->|ML Analysis| ModelService
-    ModelService -.->|Predictions| Detection
-    
-    %% Response Notifications
-    Response -->|POST /broadcast/alert| APIGateway
-    Alert -->|POST /broadcast/alert| APIGateway
     
     %% Storage
-    Ingest --> EventStore
-    Backend -.->|State| InMemory
+  %% Storage
+subgraph StorageBox["STORAGE"]
+    direction LR
+    Events["events.json<br/>File Storage"]
+    InMemory["In-Memory<br/>Alerts & State"]
+    MLModels["ML Models"]
+
+    Events --- InMemory --- MLModels
+end
+
+    
+    %% Email Addition
+    EmailUser["📧 Admin Email"]
+    
+    %% Connections matching Image
+    SystemApp -->|POST /ingest| Ingest
+    Browser -->|HTTP| ReactDash
+    AttackSim -->|POST /ingest| Ingest
+    
+    ReactDash <-->|WebSocket| APIGateway
+    ReactDash <-->|REST API| APIGateway
+    
+    APIGateway <-->|Socket.io| Ingest
+    APIGateway <-->|Notify| Alert
+    APIGateway <-->|Notify| Response
+    
+    Ingest -->|Analyze| Detection
+    Detection -->|Create Alert| Alert
+    Alert -->|Execute| Response
+    
+    Ingest -->|Store| Events
+    Ingest -->|State| InMemory
+    
+    %% Flow for Additions
+    Detection <-->|Predict| ModelService
     ModelService --> MLModels
+    Alert -->|Send Mail| EmailUser
     
-    style External fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
-    style Frontend fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px
-    style Gateway fill:#FFF3E0,stroke:#F57C00,stroke-width:2px
-    style Backend fill:#E8F5E9,stroke:#388E3C,stroke-width:2px
-    style Storage fill:#FFF9C4,stroke:#F9A825,stroke-width:2px
-    
-    style MLCluster fill:#E1F5FE,stroke:#0288D1,stroke-width:2px
-    
-    style Browser fill:#90CAF9,stroke:#1565C0
+    %% Apply Styles
+    style Nodes fill:#fff,stroke:#1976D2,stroke-width:2px
     style SystemApp fill:#90CAF9,stroke:#1565C0
+    style Browser fill:#90CAF9,stroke:#1565C0
+    
+    style Frontend fill:#fff,stroke:#7B1FA2,stroke-width:2px
     style AttackSim fill:#EF5350,stroke:#C62828
-    style Dashboard fill:#CE93D8,stroke:#6A1B9A
+    style ReactDash fill:#CE93D8,stroke:#6A1B9A
+    
+    style GatewayBox fill:#fff,stroke:#F57C00,stroke-width:2px
     style APIGateway fill:#FFB74D,stroke:#E65100
+    
+    style Backend fill:#E8F5E9,stroke:#388E3C,stroke-width:2px
     style Ingest fill:#81C784,stroke:#2E7D32
     style Detection fill:#81C784,stroke:#2E7D32
-    style ModelService fill:#4FC3F7,stroke:#0277BD
     style Alert fill:#81C784,stroke:#2E7D32
     style Response fill:#81C784,stroke:#2E7D32
+    style ModelService fill:#4FC3F7,stroke:#0277BD
+    
+    style StorageBox fill:#fff,stroke:#F9A825,stroke-width:2px
+    style Events fill:#FFF59D,stroke:#FBC02D
+    style InMemory fill:#FFF59D,stroke:#FBC02D
+    style MLModels fill:#FFF59D,stroke:#FBC02D
+    
+    style EmailUser fill:#FFEBEE,stroke:#C62828
 ```
 
 ### **Data Flow Sequence**
@@ -158,7 +174,7 @@ sequenceDiagram
 
 ### **1. Frontend - React Dashboard**
 
-**Location**: `frontend/`
+**Location**: `client/frontend/`
 
 **Technology Stack**:
 - React 18 with Vite
@@ -204,7 +220,7 @@ src/
 
 ### **2. API Gateway**
 
-**Location**: `backend/api-gateway/`
+**Location**: `client/backend/api-gateway/`
 
 **Port**: 3001
 
@@ -238,7 +254,7 @@ WebSocket Events:
 
 ### **3. Ingest Service**
 
-**Location**: `backend/ingest-service/`
+**Location**: `client/backend/ingest-service/`
 
 **Port**: 8001
 
@@ -288,7 +304,7 @@ GET  /health              # Health check
 
 ### **4. Detection Engine**
 
-**Location**: `backend/detection-engine/`
+**Location**: `client/backend/detection-engine/`
 
 **Port**: 8002
 
@@ -352,7 +368,7 @@ GET  /health              # Health check with rule count
 
 ### **5. Alert Manager**
 
-**Location**: `backend/alert-manager/`
+**Location**: `client/backend/alert-manager/`
 
 **Port**: 8003
 
@@ -409,7 +425,7 @@ GET  /health              # Health check
 
 ### **6. Response Engine**
 
-**Location**: `backend/response-engine/`
+**Location**: `client/backend/response-engine/`
 
 **Port**: 8004
 
@@ -475,7 +491,7 @@ action_log = []           # All actions taken
 
 ### **7. SystemApp - Monitoring Node**
 
-**Location**: `systemapp/`
+**Location**: `client/systemapp/`
 
 **Port**: 5000
 
@@ -520,7 +536,7 @@ The SystemApp acts as a "honeypot" with trap doors that attackers might target, 
 
 ### **8. Attack Simulator**
 
-**Location**: `scripts/`
+**Location**: `client/scripts/`
 
 **Technology**: Python
 
@@ -541,48 +557,6 @@ The SystemApp acts as a "honeypot" with trap doors that attackers might target, 
 ```bash
 python scripts/simulate_attack.py
 ```
-
----
-
-### **9. Model Microservice (ML Backend)**
-
-**Location**: `model_microservice/`
-
-**Port**: 5001
-
-**Technology**:
-- Flask
-- Scikit-learn / TensorFlow
-- NumPy / Pandas
-
-**Files**:
-- `app.py` - Flask application with ML endpoints
-- `train.py` - Model training pipeline
-- `simulation_driver.py` - Attack simulation driver
-- `models/` - Trained ML model artifacts (12 files)
-- `frontend/` - ML service dashboard
-- `Dockerfile` - Container configuration
-
-**Endpoints**:
-```python
-GET  /health              # Health check
-POST /predict             # Get ML prediction for event
-POST /train               # Trigger model training
-GET  /models              # List available models
-POST /simulate            # Run attack simulation
-```
-
-**Features**:
-- ✅ Machine learning-based anomaly detection
-- ✅ Model training pipeline
-- ✅ Attack simulation capabilities
-- ✅ Multiple trained model support
-- ✅ Kubernetes deployment ready
-
-**ML Models**:
-- Anomaly detection models
-- Attack classification models
-- Behavioral analysis models
 
 ---
 
@@ -653,11 +627,11 @@ POST /simulate            # Run attack simulation
 ## Communication Protocols
 
 ### **HTTP/REST**
-- Frontend ↔ API Gateway: REST API calls
-- Service ↔ Service: FastAPI async HTTP
+- Frontend ↔️ API Gateway: REST API calls
+- Service ↔️ Service: FastAPI async HTTP
 
 ### **WebSocket (Socket.io)**
-- Frontend ↔ API Gateway: Real-time events
+- Frontend ↔️ API Gateway: Real-time events
 - Ingest Service → API Gateway: Event broadcasting
 
 ### **Events**
@@ -682,7 +656,6 @@ POST /simulate            # Run attack simulation
 | Detection Engine | 8002 | HTTP |
 | Alert Manager | 8003 | HTTP |
 | Response Engine | 8004 | HTTP |
-| Model Microservice | 5001 | HTTP |
 | SystemApp Monitor | 5000 | HTTP |
 
 ---
@@ -694,71 +667,38 @@ POST /simulate            # Run attack simulation
 **Start Backend Services**:
 ```bash
 # Terminal 1: API Gateway
-cd backend/api-gateway
+cd client/backend/api-gateway
 python main.py
 
 # Terminal 2: Ingest Service
-cd backend/ingest-service
+cd client/backend/ingest-service
 python main.py
 
 # Terminal 3: Detection Engine
-cd backend/detection-engine
+cd client/backend/detection-engine
 python main.py
 
 # Terminal 4: Alert Manager
-cd backend/alert-manager
+cd client/backend/alert-manager
 python main.py
 
 # Terminal 5: Response Engine
-cd backend/response-engine
+cd client/backend/response-engine
 python main.py
-
-# Terminal 6: Model Microservice
-cd model_microservice
-python app.py
 ```
 
 **Start Frontend**:
 ```bash
-# Terminal 7: React Dashboard
-cd frontend
+# Terminal 6: React Dashboard
+cd client/frontend
 npm run dev
 ```
 
 **Start Monitoring Node**:
 ```bash
-# Terminal 8: SystemApp
-cd systemapp
+# Terminal 7: SystemApp
+cd client/systemapp
 python monitor_server.py
-```
-
-### **Kubernetes Deployment**
-
-The project includes Kubernetes deployment manifests in `k8s/`:
-
-**Available Manifests**:
-```
-k8s/
-├── alert-manager.yaml
-├── api-gateway.yaml
-├── detection-engine.yaml
-├── frontend.yaml
-├── ingest-service.yaml
-├── ingress.yaml
-├── model-microservice.yaml
-└── response-engine.yaml
-```
-
-**Deploy to Kubernetes**:
-```bash
-# Build Docker images
-./build-images.sh
-
-# Deploy to Kubernetes cluster
-./deploy-k8s.sh
-
-# Or manually apply manifests
-kubectl apply -f k8s/
 ```
 
 ### **Environment Variables**
@@ -790,10 +730,6 @@ API_GATEWAY_URL=http://localhost:3001
 
 # SystemApp
 MAIN_SERVER_URL=http://localhost:8001/ingest
-
-# Model Microservice
-PORT=5001
-DETECTION_ENGINE_URL=http://localhost:8002
 ```
 
 ---
@@ -825,17 +761,16 @@ DETECTION_ENGINE_URL=http://localhost:8002
    - Currently using: JSON files + in-memory storage
 
 3. **Container Orchestration**
-   - ✅ Docker images (Dockerfiles available)
-   - ✅ Kubernetes deployment manifests (k8s/)
-   - ✗ Service mesh (Istio)
-   - Available: `build-images.sh`, `deploy-k8s.sh`
+   - ❌ Docker images
+   - ❌ Kubernetes deployment
+   - ❌ Service mesh (Istio)
+   - Currently: Manual process management
 
 4. **ML/AI Models**
-   - ✅ Dedicated ML backend cluster (model_microservice/)
-   - ✗ KServe/Seldon Core
-   - ✅ Trained anomaly detection models
-   - ✅ Attack simulation driver
-   - Currently: Flask-based ML service with trained models
+   - ❌ Dedicated ML backend cluster
+   - ❌ KServe/Seldon Core
+   - ❌ Advanced anomaly detection models
+   - Currently: Rule-based detection only
 
 5. **Observability**
    - ❌ Prometheus metrics
