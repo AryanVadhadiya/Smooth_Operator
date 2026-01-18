@@ -37,6 +37,7 @@ The system follows a modular microservices architecture, ensuring scalability an
 | **Detection Engine** | `8002` | Analyzes events against security rules (SQLi, Port Scan, Abnormal Load). |
 | **Alert Manager** | `8003` | Correlates anomalies into human-readable Alerts. Deduplicates noise. |
 | **Response Engine** | `8004` | Executes Playbooks (e.g., Block IP, Kill Process) using `psutil`/IPTables. |
+| **Model Service** | `5001` | ML-based anomaly detection and attack simulation using trained models. |
 
 ---
 
@@ -60,11 +61,15 @@ npm install
 ### 2. Backend Setup
 Install Python dependencies for all microservices (only needed once):
 ```bash
-# Auto-install for all services
+# Auto-install for backend microservices
 for service in ingest-service api-gateway detection-engine alert-manager response-engine; do
   echo "Installing deps for $service..."
   (cd backend/$service && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt)
 done
+
+# Install for Model Microservice
+echo "Installing deps for model_microservice..."
+(cd model_microservice && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt)
 ```
 
 ### 3. Launch! 🚀
@@ -89,7 +94,7 @@ Turn your setup into a live cyber-range with 3 devices.
 ### 🔻 Device B: The Victim (Target)
 *   **Role**: A server exposing critical services (Healthcare DB, SCADA Controller).
 *   **Setup**:
-    1.  Copy `scripts/monitor_server.py` to this machine.
+    1.  Copy `systemapp/monitor_server.py` to this machine.
     2.  Run: `python monitor_server.py`.
     3.  Enter Device A's IP when prompted (or configured in script).
 *   **Effect**: Streams **REAL** system metrics (CPU, RAM) to the Blue Team dashboard.
@@ -105,6 +110,29 @@ Turn your setup into a live cyber-range with 3 devices.
     3.  **Config**: Customize concurrency and request count for stress testing.
 
 ![Attacker Console](docs/images/attacker-console.png)
+
+---
+
+## 🚢 Kubernetes Deployment
+
+Deploy the entire stack to a Kubernetes cluster using the provided scripts and manifests.
+
+### 1. Build & Deploy
+```bash
+# Build all Docker images
+./build-images.sh
+
+# Deploy to Kubernetes (Apply manifests)
+./kuber_run.sh
+```
+
+### 2. Verify Deployment
+```bash
+kubectl get pods
+kubectl get services
+```
+
+The frontend will be available at the NodePort or LoadBalancer IP specified in `k8s/frontend.yaml`.
 
 ---
 
@@ -136,9 +164,11 @@ Threat_Ops.ai/
 │   ├── detection-engine/      # Analysis Logic (Port 8002)
 │   ├── alert-manager/         # Alert Logic (Port 8003)
 │   └── response-engine/       # Active Defense (Port 8004)
+├── model_microservice/        # ML Models & Training (Port 5001)
 ├── frontend/                  # React Dashboard (Port 5173)
+├── systemapp/                 # Monitoring Agent
+├── k8s/                       # Kubernetes Manifests
 ├── scripts/                   # Standalone Tools
-│   ├── monitor_server.py      # Universal Victim Agent (Flask)
 │   └── attacker_ui.html       # Attack Console (HTML/JS)
 ├── docs/                      # Documentation & Images
 └── arch.md                    # Detailed Architecture Docs
@@ -148,8 +178,8 @@ Threat_Ops.ai/
 
 ## 🔮 Future Roadmap
 
-*   [ ] **Machine Learning**: Replace regex rules with LSTM models for anomaly detection.
-*   [ ] **Containerization**: Docker Compose setup for consistent deployment.
+*   [x] **Machine Learning**: ML-based anomaly detection service (Active).
+*   [x] **Containerization**: Docker & Kubernetes support (Active).
 *   [ ] **Database**: Move from `json` files to `PostgreSQL` + `TimescaleDB`.
 *   [ ] **SIEM Integration**: Forward alerts to Splunk/Elastic.
 
