@@ -99,6 +99,18 @@ export function useAlerts() {
   // Subscribe to socket alerts
   useEffect(() => {
     const unsubscribe = subscribeToAlerts((alert) => {
+      // Deduplication / Throttling for backend alerts
+      const cooldownKey = `${alert.title}-${alert.source || 'unknown'}`
+      const lastAlert = alertCooldowns.get(cooldownKey)
+
+      // If we saw this exact alert type from this source < 3 seconds ago, skip adding it to UI
+      // to prevents UI flood. The backend still records it.
+      if (lastAlert && Date.now() - lastAlert < 3000) {
+         return
+      }
+
+      alertCooldowns.set(cooldownKey, Date.now())
+
       const newAlert = {
         ...alert,
         id: `alert-${alertIdRef.current++}`,
@@ -173,9 +185,25 @@ export function useAlerts() {
   }, [])
 
   // Filtered alerts
+  // Filtered alerts
   const filteredAlerts = alerts.filter(alert => {
     if (filter === 'active') return !alert.acknowledged
     if (filter === 'acknowledged') return alert.acknowledged
+
+    if (filter === 'ml') {
+        const isMlRule = alert.rule_id?.startsWith('ml_')
+        const hasMlTitle = alert.title?.includes('ML:')
+        const hasMlResponse = !!alert.evidence?.ml_response
+        return isMlRule || hasMlTitle || hasMlResponse
+    }
+
+    if (filter === 'blocked') {
+        const action = alert.evidence?.action || alert.action
+        const isBlockedAction = action && action.toUpperCase() === 'BLOCKED'
+        const hasBlockedBy = !!alert.evidence?.blocked_by || !!alert.blocked_by
+        return isBlockedAction || hasBlockedBy
+    }
+
     return true
   })
 

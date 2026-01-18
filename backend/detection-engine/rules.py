@@ -59,6 +59,25 @@ SQL_INJECTION_PATTERNS = [
 def detect_sql_injection(event: Dict[str, Any]) -> Optional[AnomalySignal]:
     """Detect SQL injection patterns in event payload"""
     payload = event.get("payload", {})
+    event_type = event.get("event_type", "")
+
+    # If already identified as SQLi or blocked
+    if event_type in ["sqli_attack", "sqli_blocked", "sql_injection_attempt"]:
+        return AnomalySignal(
+            anomaly_id="",
+            rule_id="sql_injection",
+            rule_name="SQL Injection Attempt",
+            severity=Severity.CRITICAL,
+            confidence=1.0,
+            description=f"SQL Injection attempt detected on {payload.get('path', 'unknown endpoint')}",
+            evidence={
+                "query": payload.get("query"),
+                "action": payload.get("action", "DETECTED"),
+                "blocked_by": payload.get("blocked_by")
+            },
+            source_event=event,
+            recommendation="Already neutralized" if payload.get("action") == "BLOCKED" else "Immediate IP Block"
+        )
 
     # Check all string values in payload
     suspicious_values = []
@@ -89,6 +108,57 @@ def detect_sql_injection(event: Dict[str, Any]) -> Optional[AnomalySignal]:
             source_event=event,
             recommendation="Block source IP, review and sanitize input parameters"
         )
+    if suspicious_values:
+        return AnomalySignal(
+            anomaly_id="",  # Will be assigned by caller
+            rule_id="sql_injection",
+            rule_name="SQL Injection Detection",
+            severity=Severity.CRITICAL,
+            confidence=0.85,
+            description=f"SQL injection pattern detected in {len(suspicious_values)} field(s)",
+            evidence={
+                "matched_fields": suspicious_values,
+                "source_ip": event.get("source_ip"),
+                "service": event.get("service"),
+            },
+            source_event=event,
+            recommendation="Block source IP, review and sanitize input parameters"
+        )
+    return None
+
+
+def detect_sector_attack(event: Dict[str, Any]) -> Optional[AnomalySignal]:
+    """Detect sector-specific attacks (IoMT, Sensors, Traffic)"""
+    event_type = event.get("event_type", "")
+    payload = event.get("payload", {})
+
+    if event_type in ["iomt_attack", "sensor_attack", "traffic_attack"]:
+        # Determine specific type
+        attack_name = "Sector Attack"
+        if event_type == "iomt_attack": attack_name = "IoMT Device Compromise"
+        elif event_type == "sensor_attack": attack_name = "IoT Sensor Spoofing"
+        elif event_type == "traffic_attack": attack_name = "Smart City Traffic Hack"
+
+        # Check if it was blocked by ML
+        blocked_by = payload.get("blocked_by", "")
+        is_ml = "ML" in blocked_by
+
+        return AnomalySignal(
+            anomaly_id="",
+            rule_id=f"ml_{event_type}" if is_ml else f"rule_{event_type}", # vital for ML tab filter
+            rule_name=f"🧠 ML: {attack_name}" if is_ml else f"⚠️ {attack_name}",
+            severity=Severity.CRITICAL,
+            confidence=0.95 if is_ml else 1.0,
+            description=f"{attack_name} detected targeting {payload.get('domain', 'unknown')} sector.",
+            evidence={
+                "action": payload.get("action", "DETECTED"),
+                "blocked_by": blocked_by,
+                "sensor_data": payload.get("sensor_data"),
+                "threat_type": payload.get("threat_type")
+            },
+            source_event=event,
+            recommendation="Isolate compromised devices immediately"
+        )
     return None
 
 
@@ -98,12 +168,18 @@ def detect_sql_injection(event: Dict[str, Any]) -> Optional[AnomalySignal]:
 # Track request counts per IP (in-memory, resets on restart)
 request_counts: Dict[str, List[float]] = defaultdict(list)
 RATE_WINDOW_SECONDS = 60
-RATE_THRESHOLD = 100
+RATE_THRESHOLD = 500 # Increased threshold to reduce noise
 
 
 def detect_rate_spike(event: Dict[str, Any]) -> Optional[AnomalySignal]:
     """Detect abnormal request rates from a single IP"""
     source_ip = event.get("source_ip", "")
+    event_type = event.get("event_type", "")
+
+    # Skip rate check for events that are already attack reports
+    if event_type in ["sqli_attack", "sqli_blocked", "iomt_attack", "sensor_attack", "traffic_attack"]:
+        return None
+
     if not source_ip:
         return None
 
@@ -124,10 +200,10 @@ def detect_rate_spike(event: Dict[str, Any]) -> Optional[AnomalySignal]:
         return AnomalySignal(
             anomaly_id="",
             rule_id="rate_spike",
-            rule_name="Request Rate Spike",
+            rule_name="Abnormal Request Rate",
             severity=Severity.WARNING,
             confidence=0.75,
-            description=f"High request rate detected: {count} requests in {RATE_WINDOW_SECONDS}s",
+            description=f"Abnormal request rate detected: {count} requests from {source_ip} in the last minute. This could indicate a DDoS attack or aggressive scraping.",
             evidence={
                 "source_ip": source_ip,
                 "request_count": count,
@@ -223,16 +299,20 @@ AUTH_WINDOW_SECONDS = 300  # 5 minutes
 AUTH_THRESHOLD = 5
 
 
+# Cooldown tracker for brute force alerts to prevent spam
+brute_force_cooldown = {}
+
 def detect_brute_force(event: Dict[str, Any]) -> Optional[AnomalySignal]:
     """Detect potential brute force attacks"""
     event_type = event.get("event_type", "")
     payload = event.get("payload", {})
 
     # Check if this is a failed auth attempt
-    if event_type != "auth_attempt":
+    if event_type not in ["auth_attempt", "auth_failure"]:
         return None
 
-    if not payload.get("success", True):  # Failed attempt
+    # For auth_failure event, it is already a failure
+    if event_type == "auth_failure" or not payload.get("success", True):
         source_ip = event.get("source_ip", "")
         current_time = time.time()
 
@@ -246,6 +326,13 @@ def detect_brute_force(event: Dict[str, Any]) -> Optional[AnomalySignal]:
 
         count = len(failed_auth_counts[source_ip])
         if count >= AUTH_THRESHOLD:
+            # Check cooldown (30s)
+            last_alert = brute_force_cooldown.get(source_ip, 0)
+            if current_time - last_alert < 30:
+                return None
+
+            brute_force_cooldown[source_ip] = current_time
+
             return AnomalySignal(
                 anomaly_id="",
                 rule_id="brute_force",
@@ -258,11 +345,33 @@ def detect_brute_force(event: Dict[str, Any]) -> Optional[AnomalySignal]:
                     "failed_attempts": count,
                     "window_seconds": AUTH_WINDOW_SECONDS,
                     "username": payload.get("username", "unknown"),
+                    "action": payload.get("action", "DETECTED"), # Ensure Blocked tab sees it
+                    "blocked_by": payload.get("blocked_by")
                 },
                 source_event=event,
                 recommendation="Block source IP, review account security"
             )
     return None
+
+# ============================================
+# Rate Spike Detection
+# ============================================
+# Track request counts per IP (in-memory, resets on restart)
+request_counts: Dict[str, List[float]] = defaultdict(list)
+RATE_THRESHOLD = 500  # requests per minute
+RATE_WINDOW = 60      # seconds
+
+def detect_rate_spike(event: Dict[str, Any]) -> Optional[AnomalySignal]:
+    """Detect abnormal request volume from a single IP"""
+    source_ip = event.get("source_ip")
+    if not source_ip:
+        return None
+
+    event_type = event.get("event_type", "")
+
+    # Skip checking rate for known attack events (reduces noise)
+    if event_type in ["sqli_attack", "sqli_blocked", "sql_injection_attempt", "iomt_attack", "sensor_attack", "traffic_attack", "auth_failure", "ddos_blocked"]:
+        return None
 
 
 # ============================================
@@ -270,6 +379,7 @@ def detect_brute_force(event: Dict[str, Any]) -> Optional[AnomalySignal]:
 # ============================================
 DETECTION_RULES = [
     ("sql_injection", detect_sql_injection),
+    ("sector_attack", detect_sector_attack),
     ("rate_spike", detect_rate_spike),
     ("high_cpu", detect_high_cpu),
     ("high_memory", detect_high_memory),

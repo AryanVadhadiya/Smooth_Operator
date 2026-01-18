@@ -48,8 +48,8 @@ function AlertsPanel({ alertsData }) {
         </div>
       </div>
 
-      <div className="flex gap-1 mb-3 p-1 rounded-glass bg-surface-glass">
-        {['all', 'active', 'acknowledged'].map((f) => (
+      <div className="flex gap-1 mb-3 p-1 rounded-glass bg-surface-glass flex-wrap">
+        {['all', 'active', 'blocked', 'ml', 'acknowledged'].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -59,7 +59,7 @@ function AlertsPanel({ alertsData }) {
                 : 'text-text-muted hover:text-text-secondary'
             }`}
           >
-            {f}
+            {f === 'ml' ? '🧠 ML' : f === 'blocked' ? '🛡️ Blocked' : f}
           </button>
         ))}
       </div>

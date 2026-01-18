@@ -123,6 +123,16 @@ function AlertCard({
               Confidence: {(alert.evidence.ml_response.score * 100).toFixed(0)}%
             </div>
           )}
+          {(alert.evidence?.action === 'BLOCKED' || alert.action === 'BLOCKED') && (
+            <div className="mb-2 px-2 py-1 rounded text-xs font-medium bg-green-500/20 text-green-400 inline-flex items-center gap-1">
+              ✅ NEUTRALIZED by {alert.evidence?.blocked_by || alert.blocked_by || 'WAF'}
+            </div>
+          )}
+          {(alert.evidence?.action === 'DETECTED' || alert.action === 'DETECTED') && !alert.evidence?.blocked_by && (
+            <div className="mb-2 px-2 py-1 rounded text-xs font-medium bg-red-500/20 text-red-400 inline-flex items-center gap-1">
+              ⚠️ DETECTED - Slipped Through
+            </div>
+          )}
         </>
       )}
 

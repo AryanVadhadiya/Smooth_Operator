@@ -10,7 +10,7 @@
 <body>
     <div class="overlay"></div>
     <div class="scan-line"></div>
-    
+
     <div class="container">
         <header>
             <div class="logo">
@@ -85,46 +85,13 @@
                 </div>
             </section>
 
-            <!-- Attack Simulations -->
-            <section class="panel attack-modules">
-                <h2>// THREAT_SIMULATION_MODULES</h2>
-                
-                <div class="module-grid">
-                    <!-- Auth Attack -->
-                    <div class="module">
-                        <h3>01. AUTH_BREACH.exe</h3>
-                        <p class="desc">Simulate a brute force or credential stuffing attack.</p>
-                        <form id="auth-form">
-                            <div class="input-group">
-                                <label>USERNAME</label>
-                                <input type="text" id="username" placeholder="admin" value="admin">
-                            </div>
-                            <button type="submit" class="btn-danger">EXECUTE</button>
-                        </form>
-                    </div>
-
-                    <!-- SQL Injection -->
-                    <div class="module">
-                        <h3>02. SQL_INJECT.bat</h3>
-                        <p class="desc">Attempt to bypass logic with malicious queries.</p>
-                        <form id="sql-form">
-                            <div class="input-group">
-                                <label>QUERY_STRING</label>
-                                <input type="text" id="query" placeholder="' OR 1=1 --" value="' OR 1=1 --">
-                            </div>
-                            <button type="submit" class="btn-danger">INJECT</button>
-                        </form>
-                    </div>
-                </div>
-            </section>
-
             <!-- Server Configuration Panel -->
             <section class="panel server-config">
                 <h2>// SERVER_CONFIGURATION</h2>
                 <form id="server-config-form">
                     <div class="input-group">
-                        <label>TARGET SERVER IP:PORT</label>
-                        <input type="text" id="server-ip" placeholder="10.110.5.98:8001" value="10.110.5.98:8001">
+                        <label>INGEST END POINT</label>
+                        <input type="text" id="server-ip" placeholder="120.120.121.145:8001" value="120.120.121.145:8001">
                     </div>
                     <button type="submit" class="btn-primary">UPDATE TARGET</button>
                 </form>
@@ -142,7 +109,7 @@
                 </div>
             </section>
         </main>
-        
+
         <footer>
             THREAT_OPS SECURITY SYSTEMS v1.0.4 || UNATHORIZED ACCESS IS PROHIBITED
         </footer>

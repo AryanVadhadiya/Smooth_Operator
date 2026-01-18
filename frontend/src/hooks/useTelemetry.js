@@ -61,6 +61,8 @@ export function useTelemetry() {
         requests: data.metrics.requests,
         deviceId: data.deviceId,
         deviceName: data.deviceName,
+        devices: data.metrics.devices || {},
+        sector: data.metrics.sector || 'unknown'
       }
 
       setDevices(prev => {

@@ -109,6 +109,16 @@ function App() {
                 >
                   ⚡ Timeline
                 </button>
+                <button
+                  onClick={() => setActiveView('iot-fleet')}
+                  className={`px-3 py-1.5 rounded-glass text-caption font-medium transition-all ${
+                    activeView === 'iot-fleet'
+                      ? 'bg-accent-cyan/20 text-accent-cyan'
+                      : 'text-text-muted hover:text-text-secondary'
+                  }`}
+                >
+                  📡 IoT Fleet
+                </button>
               </div>
 
               <div className="flex-1 min-h-0">
@@ -122,6 +132,8 @@ function App() {
                     activeDeviceId={activeDeviceId}
                     onSelectDevice={setActiveDeviceId}
                   />
+                ) : activeView === 'iot-fleet' ? (
+                  <IoTMapPanel latestPoint={latestPoint} />
                 ) : (
                   <TimelinePanel />
                 )}

@@ -151,9 +151,12 @@ async def call_ml_service(event_dict: dict) -> List[AnomalyOutput]:
 
     try:
         # Build request for ML service - include all relevant data for each brain
+        # For Auth attempts, use username as payload for SQLi/Pattern detection
+        text_payload = payload.get("query") or payload.get("username") or ""
+
         ml_request = {
             "sector": domain,
-            "payload": payload.get("query", ""),
+            "payload": text_payload,
             "sensor_data": payload.get("sensor_data", []),
             "network_data": {
                 "Rate": payload.get("requests", 0) * 100,
@@ -189,6 +192,7 @@ async def call_ml_service(event_dict: dict) -> List[AnomalyOutput]:
                         ))
     except Exception as e:
         # ML service unavailable - fail silently, rules still work
+        print(f"⚠️ [ML INFO] Call to Model Service failed: {e}")
         pass
 
     return ml_anomalies

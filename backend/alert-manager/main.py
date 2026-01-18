@@ -46,11 +46,11 @@ class HealthResponse(BaseModel):
 
 ALERT_TEMPLATES = {
     "sql_injection": {
-        "title": "🚨 SQL Injection Attack Detected",
+        "title": "🚨 SQL Injection Attempt",
         "severity": "critical",
     },
     "rate_spike": {
-        "title": "⚡ Abnormal Request Rate",
+        "title": "⚡ Potential DDoS Attack",
         "severity": "warning",
     },
     "high_cpu": {
@@ -62,7 +62,7 @@ ALERT_TEMPLATES = {
         "severity": "critical",
     },
     "high_network": {
-        "title": "📡 Network Traffic Spike",
+        "title": "📡 High Network Traffic (Data Exfiltration Risk)",
         "severity": "warning",
     },
     "brute_force": {
@@ -77,10 +77,20 @@ alert_history: List[Alert] = []
 def generate_alert(anomaly: AnomalySignal) -> Alert:
     global alerts_generated
 
-    template = ALERT_TEMPLATES.get(anomaly.rule_id, {
-        "title": f"⚠️ {anomaly.rule_name}",
-        "severity": anomaly.severity,
-    })
+    # Get template config or empty dict
+    template_config = ALERT_TEMPLATES.get(anomaly.rule_id, {})
+
+    # determining severity: default to anomaly severity if not in template
+    severity = template_config.get("severity", anomaly.severity)
+
+    # If it's an ML rule (starts with ml_) or explicitly crit, trust the anomaly
+    if anomaly.rule_id.startswith("ml_") or anomaly.severity == "critical":
+        severity = anomaly.severity
+
+    template = {
+        "title": template_config.get("title", f"⚠️ {anomaly.rule_name}"),
+        "severity": severity,
+    }
 
     source = anomaly.evidence.get("service", "Unknown Service")
     if not source or source == "Unknown Service":

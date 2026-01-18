@@ -77,7 +77,29 @@
                         PING
                     </button>
                 </div>
-                <div id="targetHistory" class="flex flex-wrap gap-2 mt-3"></div>
+                <div id="targetHistory" class="flex flex-wrap gap-2 mt-3 mb-4"></div>
+
+                <!-- IoT Fleet Controls -->
+                <div class="bg-slate-800/50 p-3 rounded border border-slate-700">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-slate-400 uppercase">📡 IoT Fleet Targeting</span>
+                        <button onclick="fetchDevices()" class="text-[10px] text-neon hover:underline">Refresh Devices</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <select id="sectorSelect" onchange="switchSector()" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-white text-xs outline-none focus:border-neon">
+                                <option value="healthcare">🏥 Healthcare Node</option>
+                                <option value="agriculture">🌾 Agri Node</option>
+                                <option value="urban">🚦 Urban Node</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select id="iotDeviceSelect" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-white text-xs outline-none focus:border-neon">
+                                <option value="">🎯 General Attack (No ID)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- General Attacks -->
@@ -147,7 +169,60 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             renderHistory();
+            fetchDevices(); // Load initial devices
         });
+
+        async function switchSector() {
+            const sector = document.getElementById('sectorSelect').value;
+            const target = document.getElementById('targetIp').value;
+
+            log(`Switching Node to Sector: ${sector}...`, 'warn');
+            try {
+                // Get IP without protocol/port for config if needed, but our monitor server
+                // config endpoint handles it.
+                // Actually server_ip param is determining the INGEST server.
+                // We just want to switch SECTOR.
+                const res = await fetch(`${target}/config`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ sector: sector })
+                });
+                const data = await res.json();
+                log(`Node Switched: ${data.sector.toUpperCase()}`, 'success');
+                fetchDevices(); // Refresh list
+            } catch (err) {
+                log(`Failed to switch sector: ${err.message}`, 'error');
+            }
+        }
+
+        async function fetchDevices() {
+             const target = document.getElementById('targetIp').value;
+             const select = document.getElementById('iotDeviceSelect');
+             select.innerHTML = '<option value="">⏳ Loading...</option>';
+
+             try {
+                const res = await fetch(`${target}/devices`);
+                const data = await res.json();
+
+                select.innerHTML = '<option value="">🎯 General Attack (No ID)</option>';
+
+                // Sync sector dropdown if changed externally
+                document.getElementById('sectorSelect').value = data.sector;
+
+                Object.entries(data.devices).forEach(([id, info]) => {
+                    const statusIcon = info.health < 30 ? '🔴' : info.health < 70 ? '⚠️' : '🟢';
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.text = `${statusIcon} ${id} (${info.type})`;
+                    select.appendChild(opt);
+                });
+                log(`Loaded ${Object.keys(data.devices).length} devices from ${target}`, 'success');
+
+             } catch (err) {
+                 select.innerHTML = '<option value="">❌ Connection Error</option>';
+                 log(`Could not fetch devices: ${err.message}`, 'error');
+             }
+        }
 
         function toggleAdvanced() {
             const el = document.getElementById('advancedSettings');
@@ -229,6 +304,7 @@
             }
 
             const target = document.getElementById('targetIp').value;
+            const deviceId = document.getElementById('iotDeviceSelect').value; // Get target ID
             const reqCount = parseInt(document.getElementById('reqCount').value) || 100;
             const concurrency = parseInt(document.getElementById('concurrency').value) || 10;
 
@@ -251,11 +327,20 @@
                     try {
                         let res;
                         if (type === 'sql') {
-                            // Web Brain: SQLi payload for TF-IDF detection
+                            // Web Brain: Diverse SQLi payloads
+                            const payloads = [
+                                `SELECT * FROM users WHERE id=${1000+currentId} OR 1=1 --`,
+                                `admin' --`,
+                                `UNION SELECT 1, 'admin', password FROM users --`,
+                                `1'; DROP TABLE users --`,
+                                `' OR '1'='1`
+                            ];
+                            const payload = payloads[currentId % payloads.length];
+
                             res = await fetch(`${target}/data`, {
                                 method: 'POST',
                                 headers: {'Content-Type': 'application/json'},
-                                body: JSON.stringify({ query: `SELECT * FROM users WHERE id=${1000+currentId} OR 1=1 --` })
+                                body: JSON.stringify({ query: payload })
                             });
                         } else if (type === 'brute') {
                             res = await fetch(`${target}/login`, {
@@ -276,42 +361,42 @@
                                 headers: {'Content-Type': 'application/json'},
                                 body: JSON.stringify({
                                     domain: 'healthcare',
+                                    device_id: deviceId,
                                     sensor_data: [
-                                        Math.random() * 5000 + 1000,    // payload_size (high)
-                                        Math.floor(Math.random() * 500) + 100, // total_messages (high)
-                                        Math.random() * 100 + 50,      // frequency (high)
-                                        Math.random() * 80 + 40        // mean_frequency (high)
+                                        Math.random() * 5000 + 1000,
+                                        Math.floor(Math.random() * 500) + 100,
+                                        Math.random() * 100 + 50,
+                                        Math.random() * 80 + 40
                                     ]
                                 })
                             });
                         } else if (type === 'agriculture') {
-                            // Agri Brain: Physics violation - high temp + low water (attack pattern from train.py)
+                            // Agri Brain: Physics violation
                             res = await fetch(`${target}/sensors`, {
                                 method: 'POST',
                                 headers: {'Content-Type': 'application/json'},
                                 body: JSON.stringify({
                                     domain: 'agriculture',
+                                    device_id: deviceId,
                                     sensor_data: [
-                                        Math.floor(Math.random() * 50) + 50,  // temperature (50-100, anomaly)
-                                        Math.floor(Math.random() * 10),        // humidity (0-10, anomaly)
-                                        Math.floor(Math.random() * 20),        // water_level (0-20, anomaly)
-                                        Math.floor(Math.random() * 255),       // N
-                                        Math.floor(Math.random() * 255),       // P
-                                        Math.floor(Math.random() * 255)        // K
+                                        Math.floor(Math.random() * 50) + 50,
+                                        Math.floor(Math.random() * 10),
+                                        Math.floor(Math.random() * 20),
+                                        Math.floor(Math.random() * 255),
+                                        Math.floor(Math.random() * 255),
+                                        Math.floor(Math.random() * 255)
                                     ]
                                 })
                             });
                         } else if (type === 'urban') {
-                            // Urban Brain: Traffic anomaly - zero vehicles, zero speed (jam)
+                            // Urban Brain: Traffic anomaly
                             res = await fetch(`${target}/traffic`, {
                                 method: 'POST',
                                 headers: {'Content-Type': 'application/json'},
                                 body: JSON.stringify({
                                     domain: 'urban',
-                                    sensor_data: [
-                                        0,  // Vehicle Count (0 = jam)
-                                        0   // Avg Speed (0 = stopped)
-                                    ]
+                                    device_id: deviceId,
+                                    sensor_data: [0, 0]
                                 })
                             });
                         }
