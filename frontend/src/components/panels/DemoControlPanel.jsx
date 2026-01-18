@@ -60,13 +60,17 @@ const ScenarioButton = memo(({ scenario, state, onClick, disabled }) => {
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="text-lg"
             >
-              ✓
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
             </motion.span>
           )}
           {(state === 'idle' || state === 'loading') && (
-            <span className="text-xl">{scenario.icon}</span>
+            <span className="w-5 h-5">
+              {scenario.icon === 'check' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+              {scenario.icon === 'database' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>}
+              {scenario.icon === 'bolt' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+              {scenario.icon === 'rewind' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" /></svg>}
+            </span>
           )}
         </div>
 
@@ -109,12 +113,12 @@ function DemoControlPanel() {
           border border-r-0 border-white/10
           ${isOpen ? 'bg-accent-purple text-white' : 'bg-surface-glass-active text-text-primary hover:bg-surface-glass-hover'}
         `}>
-          <span className="text-lg">🎮</span>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>
           <motion.span
             animate={{ rotate: isOpen ? 180 : 0 }}
             className="text-xs"
           >
-            ◀
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </motion.span>
         </div>
       </motion.button>
@@ -131,7 +135,7 @@ function DemoControlPanel() {
             <div className="p-4 border-b border-white/5">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-section font-medium text-text-primary flex items-center gap-2">
-                  <span>🎮</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>
                   Demo Control
                 </h3>
                 {activeScenario && (

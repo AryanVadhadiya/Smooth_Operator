@@ -72,6 +72,8 @@ except FileNotFoundError:
     print("⚠️ Web Brain files not found. Skipping...")
     web_model = None
 
+print("✅ Web Brain Online.",web_model)
+
 # --- 2. AGRI BRAIN (Random Forest - Scikit Learn) ---
 # FIXED: Loading the .pkl (Random Forest) instead of .pth (PyTorch)
 try:

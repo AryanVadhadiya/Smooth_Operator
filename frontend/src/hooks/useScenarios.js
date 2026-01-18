@@ -11,28 +11,28 @@ const SCENARIOS = {
   normal: {
     id: 'normal',
     name: 'Normal System',
-    icon: '✅',
+    icon: 'check',
     description: 'Reset to calm operational state',
     duration: 2000,
   },
   sqlInjection: {
     id: 'sqlInjection',
     name: 'SQL Injection Attack',
-    icon: '💉',
+    icon: 'database',
     description: 'Simulate malicious SQL injection attempt',
     duration: 5000,
   },
   flood: {
     id: 'flood',
     name: 'Burst / Flood Attack',
-    icon: '🌊',
+    icon: 'bolt',
     description: 'Simulate DDoS traffic flood',
     duration: 8000,
   },
   replay: {
     id: 'replay',
     name: 'Replay Incident',
-    icon: '⏮️',
+    icon: 'rewind',
     description: 'Step through historical attack timeline',
     duration: 10000,
   },
@@ -68,6 +68,9 @@ const generateScenarioTelemetry = (scenarioId) => {
       break
 
     case 'sqlInjection':
+      // Generate random attacker IP (NOT the local machine)
+      const attackerIP = '10.110.5.' + (100 + Math.floor(Math.random() * 50))
+
       // Emit attack telemetry
       socket.emit('telemetry', {
         deviceId: 'db-primary',
@@ -91,16 +94,22 @@ const generateScenarioTelemetry = (scenarioId) => {
         evidence: {
           attackType: 'SQL Injection',
           payload: "' OR 1=1; DROP TABLE users; --",
-          sourceIP: '192.168.1.' + Math.floor(Math.random() * 255),
+          sourceIP: attackerIP,
+          source_ip: attackerIP, // Also snake_case for backend compatibility
+          attacker_ip: attackerIP,
           targetEndpoint: '/api/users/login',
           blockedBy: 'WAF Rule #7',
         },
         recommendation: 'Block source IP and review parameterized queries.',
         acknowledged: false,
+        rule_id: 'sql_injection',
       })
       break
 
     case 'flood':
+      // Generate random attacker IP for DDoS
+      const floodAttackerIP = '10.110.5.' + (100 + Math.floor(Math.random() * 50))
+
       // Emit flood telemetry
       const floodInterval = setInterval(() => {
         socket.emit('telemetry', {
@@ -130,23 +139,28 @@ const generateScenarioTelemetry = (scenarioId) => {
           attackType: 'DDoS / Traffic Flood',
           requestsPerSecond: 2500,
           uniqueSourceIPs: 847,
+          sourceIP: floodAttackerIP,
+          source_ip: floodAttackerIP,
+          attacker_ip: floodAttackerIP,
           avgResponseTime: '12.4s',
           droppedConnections: 1823,
         },
         recommendation: 'Enable CDN protection and geo-blocking for suspicious regions.',
         acknowledged: false,
+        rule_id: 'rate_spike',
       })
       break
 
     case 'replay':
       // Replay historical incident timeline
+      const replayAttackerIP = '10.110.5.' + (100 + Math.floor(Math.random() * 50))
       const events = [
-        { time: 0, alert: { title: 'Reconnaissance Scan Detected', severity: 'warning', source: 'Firewall' }},
-        { time: 2000, alert: { title: 'Failed SSH Attempts', severity: 'warning', source: 'Auth Server' }},
-        { time: 4000, alert: { title: 'Brute Force Attack', severity: 'critical', source: 'Auth Server' }},
-        { time: 5500, alert: { title: 'Credential Compromise Suspected', severity: 'critical', source: 'SIEM' }},
-        { time: 7000, alert: { title: 'Lateral Movement Detected', severity: 'critical', source: 'Network Monitor' }},
-        { time: 8500, alert: { title: 'Data Exfiltration Attempt', severity: 'critical', source: 'DLP' }},
+        { time: 0, alert: { title: 'Reconnaissance Scan Detected', severity: 'warning', source: 'Firewall', rule_id: 'port_scan' }},
+        { time: 2000, alert: { title: 'Failed SSH Attempts', severity: 'warning', source: 'Auth Server', rule_id: 'brute_force' }},
+        { time: 4000, alert: { title: 'Brute Force Attack', severity: 'critical', source: 'Auth Server', rule_id: 'brute_force' }},
+        { time: 5500, alert: { title: 'Credential Compromise Suspected', severity: 'critical', source: 'SIEM', rule_id: 'credential_stuffing' }},
+        { time: 7000, alert: { title: 'Lateral Movement Detected', severity: 'critical', source: 'Network Monitor', rule_id: 'lateral_movement' }},
+        { time: 8500, alert: { title: 'Data Exfiltration Attempt', severity: 'critical', source: 'DLP', rule_id: 'data_exfiltration' }},
       ]
 
       events.forEach(({ time, alert }) => {
@@ -157,6 +171,12 @@ const generateScenarioTelemetry = (scenarioId) => {
             description: `Replay of historical incident at T+${time/1000}s`,
             timestamp: new Date().toISOString(),
             acknowledged: false,
+            evidence: {
+              sourceIP: replayAttackerIP,
+              source_ip: replayAttackerIP,
+              attacker_ip: replayAttackerIP,
+              timeline_position: `T+${time/1000}s`,
+            },
           })
         }, time)
       })

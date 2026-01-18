@@ -14,7 +14,9 @@ export default function ThreatMapPanel({
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-section font-medium text-text-primary flex items-center gap-2">
-          <span className="text-accent-purple">◎</span>
+          <span className="text-accent-purple">
+            <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </span>
           Connected Nodes
         </h3>
         <span className="text-caption text-text-muted bg-white/5 px-2 py-1 rounded-full">
@@ -25,7 +27,7 @@ export default function ThreatMapPanel({
       <div className="flex-1 space-y-2 overflow-y-auto pr-1">
         {devices.length === 0 ? (
            <div className="flex flex-col items-center justify-center h-40 text-text-muted opacity-50">
-             <span className="text-2xl mb-2">📡</span>
+             <span className="text-lg font-bold mb-2">MAP</span>
              <span className="text-caption">Scanning for devices...</span>
            </div>
         ) : (

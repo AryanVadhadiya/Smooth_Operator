@@ -82,10 +82,30 @@
                 <!-- IoT Fleet Controls -->
                 <div class="bg-slate-800/50 p-3 rounded border border-slate-700">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-xs font-bold text-slate-400 uppercase">📡 IoT Fleet Targeting</span>
-                        <button onclick="fetchDevices()" class="text-[10px] text-neon hover:underline">Refresh Devices</button>
+                        <span class="text-xs font-bold text-slate-400 uppercase">📡 Fleet Mode (Multi-Laptop)</span>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="fleetModeToggle" onchange="toggleFleetMode()" class="accent-neon">
+                            <span class="text-[10px] text-neon">Enable Fleet Routing</span>
+                        </label>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
+
+                    <div id="fleetModePanel" class="hidden space-y-2">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">API Gateway URL</label>
+                            <input type="text" id="gatewayUrl" value="http://localhost:3001"
+                                   class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-white text-xs outline-none focus:border-neon">
+                        </div>
+                        <div class="flex gap-2">
+                            <select id="fleetNodeSelect" class="flex-1 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-white text-xs outline-none focus:border-neon">
+                                <option value="">🔄 Click "Refresh" to load nodes</option>
+                            </select>
+                            <button onclick="fetchFleetNodes()" class="bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-[10px] text-white">Refresh</button>
+                        </div>
+                        <div id="fleetStatus" class="text-[10px] text-slate-500"></div>
+                    </div>
+
+                    <!-- Legacy Direct Mode (shown when Fleet Mode is OFF) -->
+                    <div id="directModePanel" class="grid grid-cols-2 gap-3 mt-2">
                         <div>
                             <select id="sectorSelect" onchange="switchSector()" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-white text-xs outline-none focus:border-neon">
                                 <option value="healthcare">🏥 Healthcare Node</option>
@@ -278,6 +298,62 @@
             }
         }
 
+        // ==========================================
+        // FLEET MODE FUNCTIONS
+        // ==========================================
+        function toggleFleetMode() {
+            const enabled = document.getElementById('fleetModeToggle').checked;
+            document.getElementById('fleetModePanel').classList.toggle('hidden', !enabled);
+            document.getElementById('directModePanel').classList.toggle('hidden', enabled);
+            log(`Fleet Mode: ${enabled ? 'ENABLED' : 'DISABLED'}`, enabled ? 'success' : 'warn');
+            if (enabled) {
+                fetchFleetNodes();
+            }
+        }
+
+        async function fetchFleetNodes() {
+            const gatewayUrl = document.getElementById('gatewayUrl').value;
+            const select = document.getElementById('fleetNodeSelect');
+            const status = document.getElementById('fleetStatus');
+
+            select.innerHTML = '<option value="">⏳ Loading...</option>';
+            status.textContent = 'Connecting to API Gateway...';
+
+            try {
+                const res = await fetch(`${gatewayUrl}/nodes`, { signal: AbortSignal.timeout(5000) });
+                const data = await res.json();
+
+                if (!data.nodes || data.nodes.length === 0) {
+                    select.innerHTML = '<option value="">⚠️ No nodes registered</option>';
+                    status.textContent = '0 nodes online. Start monitor_server.py on laptops!';
+                    log('No fleet nodes found. Start monitor_server.py on laptops.', 'warn');
+                    return;
+                }
+
+                select.innerHTML = '';
+                data.nodes.forEach(node => {
+                    const statusIcon = node.status === 'online' ? '🟢' : '🔴';
+                    const sectorIcon = node.sector === 'healthcare' ? '🏥' :
+                                       node.sector === 'agriculture' ? '🌾' : '🚦';
+                    const opt = document.createElement('option');
+                    opt.value = node.sector; // Use sector for routing
+                    opt.dataset.nodeId = node.node_id;
+                    opt.dataset.ip = node.ip;
+                    opt.text = `${statusIcon} ${sectorIcon} ${node.node_id} (${node.ip})`;
+                    select.appendChild(opt);
+                });
+
+                const online = data.nodes.filter(n => n.status === 'online').length;
+                status.textContent = `${online}/${data.nodes.length} nodes online`;
+                log(`Fleet nodes loaded: ${online} online`, 'success');
+
+            } catch (err) {
+                select.innerHTML = '<option value="">❌ Connection Error</option>';
+                status.textContent = 'Cannot reach API Gateway';
+                log(`Fleet error: ${err.message}`, 'error');
+            }
+        }
+
         async function checkConnection() {
             const target = document.getElementById('targetIp').value;
             log(`Pinging target: ${target}...`, 'info');
@@ -297,16 +373,72 @@
             }
         }
 
+        function getAttackPayload(type) {
+            // Generate attack payload based on type
+            const payloads = {
+                sql: { query: "SELECT * FROM users WHERE 1=1 OR password LIKE '%'" },
+                brute: { username: `admin_${Math.floor(Math.random() * 1000)}`, password: "password123" },
+                ddos: { rate: 10000 },
+                healthcare: { sensor_data: [1024, 5000, 100, 100] },
+                agriculture: { sensor_data: [100, 0, 0, 255, 255, 255] },
+                urban: { sensor_data: [500, 5] }
+            };
+            return payloads[type] || {};
+        }
+
         async function launchAttack(type) {
             if (isAttacking) {
                 log('Attack already in progress. Stop first.', 'error');
                 return;
             }
 
+            const fleetMode = document.getElementById('fleetModeToggle').checked;
+
+            // FLEET MODE: Route through API Gateway
+            if (fleetMode) {
+                const gatewayUrl = document.getElementById('gatewayUrl').value;
+                const select = document.getElementById('fleetNodeSelect');
+                const targetSector = select.value;
+
+                if (!targetSector) {
+                    log('Select a target node first!', 'error');
+                    return;
+                }
+
+                log(`🎯 FLEET ATTACK: ${type.toUpperCase()} → ${targetSector.toUpperCase()} nodes via Gateway`, 'warn');
+
+                try {
+                    const res = await fetch(`${gatewayUrl}/attack`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            sector: targetSector,
+                            attack_type: type,
+                            payload: getAttackPayload(type)
+                        })
+                    });
+
+                    const result = await res.json();
+                    if (result.success) {
+                        log(`✅ Attack routed to ${result.nodes_targeted} node(s)`, 'success');
+                        result.results.forEach(r => {
+                            log(`  └─ ${r.node_id}: ${r.status}`, r.status === 'delivered' ? 'success' : 'error');
+                        });
+                    } else {
+                        log(`❌ Routing failed: ${result.error}`, 'error');
+                    }
+                } catch (err) {
+                    log(`Gateway error: ${err.message}`, 'error');
+                }
+                return;
+            }
+
+            // DIRECT MODE: Original behavior
             const target = document.getElementById('targetIp').value;
             const deviceId = document.getElementById('iotDeviceSelect').value; // Get target ID
             const reqCount = parseInt(document.getElementById('reqCount').value) || 100;
             const concurrency = parseInt(document.getElementById('concurrency').value) || 10;
+
 
             isAttacking = true;
             shouldStop = false;

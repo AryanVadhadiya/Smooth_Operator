@@ -7,11 +7,15 @@ import TimelinePanel from './components/panels/TimelinePanel'
 import AlertsPanel from './components/panels/AlertsPanel'
 import TelemetryTerminal from './components/panels/TelemetryTerminal'
 import DemoControlPanel from './components/panels/DemoControlPanel'
+import IoTMapPanel from './components/panels/IoTMapPanel'
+import ResponseStatusPanel from './components/panels/ResponseStatusPanel'
+import DroppedPacketsPanel from './components/panels/DroppedPacketsPanel'
 
 import TelemetryChart from './components/charts/TelemetryChart'
 
 import useTelemetry from './hooks/useTelemetry'
 import useAlerts from './hooks/useAlerts'
+import useDroppedPackets from './hooks/useDroppedPackets'
 
 function App() {
   const [connectionStatus, setConnectionStatus] = useState('connected')
@@ -33,7 +37,11 @@ function App() {
   const alertsData = useAlerts()
   const { stats: alertStats } = alertsData
 
-  const [blockedCount, setBlockedCount] = useState(0)
+  // Use dropped packets hook
+  const { droppedPackets, droppedStats } = useDroppedPackets()
+
+  // Calculate blocked count from dropped packets stats
+  const blockedCount = droppedStats.total_dropped || 0
 
   // Calculate total events per minute from all active devices
   const totalEventsRate = devices.reduce((acc, device) => {
@@ -53,19 +61,10 @@ function App() {
   // or randomize it slightly to look alive if 0.
   const eventsRate = latestPoint ? latestPoint.requests : 0
 
-  // Mock blocked count dynamics based on alerts
-  useEffect(() => {
-    setBlockedCount(prev => {
-      // If we have critical alerts, slowly increase blocked count
-      if (alertStats.critical > 0 && Math.random() > 0.7) return prev + 1
-      return prev
-    })
-  }, [alertStats.critical])
-
   const topbarStats = {
     eventsRate: eventsRate,
     activeAlerts: alertStats.active,
-    blockedCount: blockedCount + (alertStats.critical * 2) // Base + dynamic
+    blockedCount: blockedCount
   }
 
   useEffect(() => {
@@ -97,7 +96,8 @@ function App() {
                       : 'text-text-muted hover:text-text-secondary'
                   }`}
                 >
-                  📊 Telemetry
+                  <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  Telemetry
                 </button>
                 <button
                   onClick={() => setActiveView('timeline')}
@@ -107,7 +107,8 @@ function App() {
                       : 'text-text-muted hover:text-text-secondary'
                   }`}
                 >
-                  ⚡ Timeline
+                  <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  Timeline
                 </button>
                 <button
                   onClick={() => setActiveView('iot-fleet')}
@@ -117,7 +118,30 @@ function App() {
                       : 'text-text-muted hover:text-text-secondary'
                   }`}
                 >
-                  📡 IoT Fleet
+                  <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" /></svg>
+                  IoT Fleet
+                </button>
+                <button
+                  onClick={() => setActiveView('response')}
+                  className={`px-3 py-1.5 rounded-glass text-caption font-medium transition-all ${
+                    activeView === 'response'
+                      ? 'bg-accent-green/20 text-accent-green'
+                      : 'text-text-muted hover:text-text-secondary'
+                  }`}
+                >
+                  <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                  Response
+                </button>
+                <button
+                  onClick={() => setActiveView('dropped')}
+                  className={`px-3 py-1.5 rounded-glass text-caption font-medium transition-all ${
+                    activeView === 'dropped'
+                      ? 'bg-status-critical/20 text-status-critical'
+                      : 'text-text-muted hover:text-text-secondary'
+                  }`}
+                >
+                  <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                  Dropped {blockedCount > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-status-critical/30 text-xs">{blockedCount}</span>}
                 </button>
               </div>
 
@@ -134,6 +158,13 @@ function App() {
                   />
                 ) : activeView === 'iot-fleet' ? (
                   <IoTMapPanel latestPoint={latestPoint} />
+                ) : activeView === 'response' ? (
+                  <ResponseStatusPanel />
+                ) : activeView === 'dropped' ? (
+                  <DroppedPacketsPanel
+                    droppedPackets={droppedPackets}
+                    stats={droppedStats}
+                  />
                 ) : (
                   <TimelinePanel />
                 )}
@@ -158,10 +189,10 @@ function App() {
 
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background-secondary border-t border-white/5 px-4 py-2">
         <div className="flex justify-around">
-          <MobileNavItem icon="◎" label="Map" active />
-          <MobileNavItem icon="📊" label="Telemetry" />
-          <MobileNavItem icon="⚠" label="Alerts" badge={3} />
-          <MobileNavItem icon="◈" label="Log" />
+          <MobileNavItem icon="map" label="Map" active />
+          <MobileNavItem icon="chart" label="Telemetry" />
+          <MobileNavItem icon="alert" label="Alerts" badge={3} />
+          <MobileNavItem icon="log" label="Log" />
         </div>
       </nav>
 

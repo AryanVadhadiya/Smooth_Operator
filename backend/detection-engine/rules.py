@@ -61,8 +61,25 @@ def detect_sql_injection(event: Dict[str, Any]) -> Optional[AnomalySignal]:
     payload = event.get("payload", {})
     event_type = event.get("event_type", "")
 
+    # Extract source IP from multiple possible locations
+    def get_source_ip():
+        # Priority order for IP extraction
+        candidates = [
+            event.get("source_ip"),
+            payload.get("source_ip"),
+            payload.get("ip"),
+            payload.get("attacker_ip"),
+        ]
+        for ip in candidates:
+            if ip and ip not in ("unknown", "Unknown", "127.0.0.1", "localhost"):
+                return ip
+        # Fallback to event source_ip even if localhost (for local testing)
+        return event.get("source_ip") or "unknown"
+
     # If already identified as SQLi or blocked
     if event_type in ["sqli_attack", "sqli_blocked", "sql_injection_attempt"]:
+        source_ip = get_source_ip()
+
         return AnomalySignal(
             anomaly_id="",
             rule_id="sql_injection",
@@ -73,7 +90,9 @@ def detect_sql_injection(event: Dict[str, Any]) -> Optional[AnomalySignal]:
             evidence={
                 "query": payload.get("query"),
                 "action": payload.get("action", "DETECTED"),
-                "blocked_by": payload.get("blocked_by")
+                "blocked_by": payload.get("blocked_by"),
+                "source_ip": source_ip,
+                "ip": source_ip,  # Also add 'ip' for frontend compatibility
             },
             source_event=event,
             recommendation="Already neutralized" if payload.get("action") == "BLOCKED" else "Immediate IP Block"
@@ -93,6 +112,9 @@ def detect_sql_injection(event: Dict[str, Any]) -> Optional[AnomalySignal]:
                     break
 
     if suspicious_values:
+        # Get source_ip using same robust extraction
+        source_ip = get_source_ip()
+
         return AnomalySignal(
             anomaly_id="",  # Will be assigned by caller
             rule_id="sql_injection",
@@ -102,23 +124,8 @@ def detect_sql_injection(event: Dict[str, Any]) -> Optional[AnomalySignal]:
             description=f"SQL injection pattern detected in {len(suspicious_values)} field(s)",
             evidence={
                 "matched_fields": suspicious_values,
-                "source_ip": event.get("source_ip"),
-                "service": event.get("service"),
-            },
-            source_event=event,
-            recommendation="Block source IP, review and sanitize input parameters"
-        )
-    if suspicious_values:
-        return AnomalySignal(
-            anomaly_id="",  # Will be assigned by caller
-            rule_id="sql_injection",
-            rule_name="SQL Injection Detection",
-            severity=Severity.CRITICAL,
-            confidence=0.85,
-            description=f"SQL injection pattern detected in {len(suspicious_values)} field(s)",
-            evidence={
-                "matched_fields": suspicious_values,
-                "source_ip": event.get("source_ip"),
+                "source_ip": source_ip,
+                "ip": source_ip,  # Also add 'ip' for frontend compatibility
                 "service": event.get("service"),
             },
             source_event=event,

@@ -289,3 +289,219 @@ footer {
     margin-top: 20px;
     opacity: 0.6;
 }
+
+/* ==========================================
+   SELECT DROPDOWN STYLES
+   ========================================== */
+.select-primary {
+    width: 100%;
+    background: #000;
+    border: 1px solid #444;
+    color: var(--primary);
+    padding: 8px;
+    font-family: var(--font-stack);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300ff41' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+}
+
+.select-primary:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 10px var(--primary-dim);
+}
+
+.select-primary option {
+    background: #111;
+    color: var(--primary);
+    padding: 10px;
+}
+
+/* ==========================================
+   IOT DEVICES PANEL STYLES
+   ========================================== */
+.iot-devices {
+    background: var(--panel-bg);
+}
+
+.sector-label {
+    font-size: 0.75rem;
+    color: var(--primary);
+    margin-bottom: 15px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 5px var(--primary-dim);
+}
+
+.device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.device-card {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+    padding: 12px;
+    position: relative;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.device-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 0 15px var(--primary-dim);
+}
+
+.device-card.selected {
+    border-color: var(--primary);
+    background: rgba(0, 255, 65, 0.1);
+    box-shadow: 0 0 20px var(--primary-dim);
+}
+
+.device-card.warning {
+    border-color: #ffa500;
+    background: rgba(255, 165, 0, 0.1);
+}
+
+.device-card.critical {
+    border-color: var(--alert);
+    background: rgba(255, 0, 60, 0.1);
+    animation: pulse-critical 1.5s infinite;
+}
+
+@keyframes pulse-critical {
+    0%, 100% { box-shadow: 0 0 5px var(--alert-dim); }
+    50% { box-shadow: 0 0 20px var(--alert); }
+}
+
+.device-icon {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+}
+
+.device-name {
+    font-size: 0.8rem;
+    color: #fff;
+    font-weight: bold;
+    margin-bottom: 4px;
+    word-break: break-all;
+}
+
+.device-type {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.device-health {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.health-bar {
+    flex: 1;
+    height: 6px;
+    background: #222;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.health-fill {
+    height: 100%;
+    transition: width 0.5s ease, background-color 0.5s ease;
+}
+
+.health-fill.healthy { background: var(--primary); }
+.health-fill.warning { background: #ffa500; }
+.health-fill.critical { background: var(--alert); }
+
+.health-value {
+    font-size: 0.75rem;
+    font-weight: bold;
+    min-width: 35px;
+    text-align: right;
+}
+
+.health-value.healthy { color: var(--primary); }
+.health-value.warning { color: #ffa500; }
+.health-value.critical { color: var(--alert); }
+
+.device-status {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 5px;
+    padding: 2px 6px;
+    display: inline-block;
+    border-radius: 2px;
+}
+
+.device-status.online {
+    color: var(--primary);
+    background: var(--primary-dim);
+}
+
+.device-status.warning {
+    color: #ffa500;
+    background: rgba(255, 165, 0, 0.2);
+}
+
+.device-status.compromised {
+    color: var(--alert);
+    background: var(--alert-dim);
+}
+
+.device-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.btn-secondary {
+    flex: 1;
+    background: #222;
+    color: var(--text-main);
+    border: 1px solid #444;
+    padding: 8px;
+    font-size: 0.75rem;
+}
+
+.btn-secondary:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(0, 255, 65, 0.1);
+}
+
+/* Attack Target Indicator */
+.device-card.target-indicator::before {
+    content: '🎯 TARGET';
+    position: absolute;
+    top: -8px;
+    right: 5px;
+    font-size: 0.55rem;
+    background: var(--alert);
+    color: #fff;
+    padding: 2px 5px;
+    border-radius: 2px;
+}
+
+/* Empty state */
+.no-devices {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 30px;
+    font-size: 0.9rem;
+}
+
+.no-devices span {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}

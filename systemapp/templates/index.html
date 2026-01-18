@@ -93,8 +93,29 @@
                         <label>INGEST END POINT</label>
                         <input type="text" id="server-ip" placeholder="120.120.121.145:8001" value="120.120.121.145:8001">
                     </div>
+                    <div class="input-group">
+                        <label>SECTOR</label>
+                        <select id="sector-select" class="select-primary">
+                            <option value="healthcare">🏥 HEALTHCARE</option>
+                            <option value="agriculture">🌾 AGRICULTURE</option>
+                            <option value="urban">🚦 URBAN</option>
+                        </select>
+                    </div>
                     <button type="submit" class="btn-primary">UPDATE TARGET</button>
                 </form>
+            </section>
+
+            <!-- Virtual IoT Devices Panel -->
+            <section class="panel iot-devices">
+                <h2>// VIRTUAL_IOT_FLEET</h2>
+                <p class="sector-label" id="current-sector-label">SECTOR: HEALTHCARE</p>
+                <div class="device-grid" id="device-grid">
+                    <!-- Devices populated by JS -->
+                </div>
+                <div class="device-controls">
+                    <button id="heal-all-btn" class="btn-secondary">🔧 HEAL ALL DEVICES</button>
+                    <button id="reset-devices-btn" class="btn-secondary">🔄 RESET FLEET</button>
+                </div>
             </section>
 
             <!-- Console Output -->

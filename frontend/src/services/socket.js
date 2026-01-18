@@ -245,3 +245,67 @@ export const onError = (callback) => {
     if (s) s.off('error', callback)
   }
 }
+
+// ==========================================
+// DROPPED PACKETS / IP BLOCKING EVENTS
+// ==========================================
+
+export const subscribeToDroppedPackets = (callback) => {
+  const s = getSocket()
+  if (s) {
+    s.on('ip:dropped', callback)
+  }
+  return () => {
+    if (s) s.off('ip:dropped', callback)
+  }
+}
+
+export const subscribeToIPBlocked = (callback) => {
+  const s = getSocket()
+  if (s) {
+    s.on('ip:blocked', callback)
+  }
+  return () => {
+    if (s) s.off('ip:blocked', callback)
+  }
+}
+
+export const subscribeToIPUnblocked = (callback) => {
+  const s = getSocket()
+  if (s) {
+    s.on('ip:unblocked', callback)
+  }
+  return () => {
+    if (s) s.off('ip:unblocked', callback)
+  }
+}
+
+export const subscribeToIPRateLimited = (callback) => {
+  const s = getSocket()
+  if (s) {
+    s.on('ip:rate_limited', callback)
+  }
+  return () => {
+    if (s) s.off('ip:rate_limited', callback)
+  }
+}
+
+export const subscribeToAttackBlocked = (callback) => {
+  const s = getSocket()
+  if (s) {
+    s.on('attack_blocked', callback)
+  }
+  return () => {
+    if (s) s.off('attack_blocked', callback)
+  }
+}
+
+export const subscribeToAttackRouted = (callback) => {
+  const s = getSocket()
+  if (s) {
+    s.on('attack_routed', callback)
+  }
+  return () => {
+    if (s) s.off('attack_routed', callback)
+  }
+}

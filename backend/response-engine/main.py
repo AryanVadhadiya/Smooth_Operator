@@ -15,6 +15,7 @@ from playbooks import (
     get_isolated_services,
     get_action_log,
     clear_all_actions,
+    unblock_ip,
     ActionResult
 )
 
@@ -89,9 +90,11 @@ async def health_check():
 
 @app.get("/status", tags=["Status"])
 async def get_status():
+    from playbooks import throttled_ips
     return {
         "blocked_ips": get_blocked_ips(),
         "isolated_services": get_isolated_services(),
+        "throttled_ips": throttled_ips,
         "actions_executed": len(get_action_log())
     }
 
@@ -165,28 +168,109 @@ async def emit_action_events(alert: Alert, actions: List[ActionOutput]):
                 ) as resp:
                     if resp.status == 200:
                         print(f"Action event emitted: {action.action_type}")
+
+                # Sync IP blocks to API Gateway's IP Manager
+                if action.action_type == "block_ip" and action.status == "success":
+                    await sync_block_to_gateway(action.target, alert)
+
     except aiohttp.ClientError as e:
         print(f"Could not emit action event: {e}")
 
+
+async def sync_block_to_gateway(ip: str, alert: Alert):
+    """Sync IP block to API Gateway's centralized IP Manager"""
+    if not ip or ip == "unknown" or ip == "N/A":
+        return
+
+    try:
+        # Map rule_id to block reason
+        reason_map = {
+            "sql_injection": "sql_injection",
+            "brute_force": "brute_force",
+            "rate_spike": "flooding",
+            "ml_web_gatekeeper": "ml_detected",
+            "ml_network_shield": "flooding",
+        }
+        reason = reason_map.get(alert.rule_id, "abuse")
+
+        # Map severity
+        severity_map = {
+            "critical": "critical",
+            "high": "high",
+            "warning": "medium",
+            "medium": "medium",
+            "low": "low"
+        }
+        severity = severity_map.get(alert.severity, "high")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{API_GATEWAY_URL}/ip/block",
+                json={
+                    "ip": ip,
+                    "reason": reason,
+                    "severity": severity,
+                    "duration": None  # Use default based on severity
+                },
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp:
+                if resp.status == 200:
+                    result = await resp.json()
+                    print(f"[Response Engine] Synced block to Gateway: {ip} -> {result.get('message')}")
+                else:
+                    print(f"[Response Engine] Gateway block sync failed: {resp.status}")
+    except Exception as e:
+        print(f"[Response Engine] Could not sync block to Gateway: {e}")
+
+
 @app.post("/block/{ip}", tags=["Manual"])
-async def manual_block_ip(ip: str):
+async def manual_block_ip(ip: str, duration: int = 600, reason: str = "manual"):
+    """Block an IP via Response Engine (syncs to API Gateway)"""
     from playbooks import blocked_ips
 
     if ip in blocked_ips:
         return {"status": "already_blocked", "ip": ip}
 
     blocked_ips.add(ip)
-    return {"status": "blocked", "ip": ip, "message": f"IP {ip} blocked"}
+
+    # Sync to API Gateway
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{API_GATEWAY_URL}/ip/block",
+                json={"ip": ip, "reason": reason, "severity": "high", "duration": duration},
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp:
+                gateway_result = await resp.json() if resp.status == 200 else None
+    except:
+        gateway_result = None
+
+    return {
+        "status": "blocked",
+        "ip": ip,
+        "message": f"IP {ip} blocked",
+        "gateway_sync": gateway_result
+    }
 
 @app.delete("/block/{ip}", tags=["Manual"])
 async def manual_unblock_ip(ip: str):
-    from playbooks import blocked_ips
-
-    if ip not in blocked_ips:
+    """Unblock an IP via Response Engine (syncs to API Gateway)"""
+    if not unblock_ip(ip):
         raise HTTPException(status_code=404, detail="IP not blocked")
 
-    blocked_ips.discard(ip)
-    return {"status": "unblocked", "ip": ip}
+    # Sync to API Gateway
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{API_GATEWAY_URL}/ip/unblock",
+                json={"ip": ip},
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp:
+                gateway_result = await resp.json() if resp.status == 200 else None
+    except:
+        gateway_result = None
+
+    return {"status": "unblocked", "ip": ip, "gateway_sync": gateway_result}
 
 @app.post("/isolate/{service}", tags=["Manual"])
 async def manual_isolate_service(service: str):
@@ -207,6 +291,23 @@ async def manual_restore_service(service: str):
 
     isolated_services.discard(service)
     return {"status": "restored", "service": service}
+
+@app.post("/throttle/{ip}", tags=["Manual"])
+async def manual_throttle_ip(ip: str, limit: int = 10):
+    from playbooks import throttled_ips
+
+    throttled_ips[ip] = limit
+    return {"status": "throttled", "ip": ip, "limit": limit, "message": f"IP {ip} throttled to {limit} req/min"}
+
+@app.delete("/throttle/{ip}", tags=["Manual"])
+async def manual_remove_throttle(ip: str):
+    from playbooks import throttled_ips
+
+    if ip not in throttled_ips:
+        raise HTTPException(status_code=404, detail="IP not throttled")
+
+    del throttled_ips[ip]
+    return {"status": "unthrottled", "ip": ip}
 
 @app.delete("/reset", tags=["Admin"])
 async def reset_all():

@@ -66,6 +66,80 @@ async def health_check():
         events_ingested=get_event_count()
     )
 
+# ==========================================
+# NODE REGISTRY (Multi-Laptop Fleet)
+# ==========================================
+NODE_REGISTRY = {}  # {node_id: {ip, port, sector, last_seen, status}}
+
+class NodeRegistration:
+    """Pydantic model for node registration"""
+    pass  # Using dict for simplicity
+
+@app.post("/register", tags=["Fleet"])
+async def register_node(data: dict):
+    """Register a new node (laptop) with the fleet"""
+    node_id = data.get("node_id") or str(uuid.uuid4())
+    ip = data.get("ip", "unknown")
+    port = data.get("port", 5050)
+    sector = data.get("sector", "general")
+
+    NODE_REGISTRY[node_id] = {
+        "node_id": node_id,
+        "ip": ip,
+        "port": port,
+        "sector": sector,
+        "last_seen": time.time(),
+        "status": "online",
+        "registered_at": datetime.utcnow().isoformat() + "Z"
+    }
+
+    print(f"📡 Node registered: {node_id} ({ip}:{port}) as {sector.upper()}")
+
+    # Broadcast to connected clients
+    await sio.emit('node_registered', NODE_REGISTRY[node_id])
+
+    return {
+        "success": True,
+        "node_id": node_id,
+        "message": f"Registered as {sector} node"
+    }
+
+@app.get("/nodes", tags=["Fleet"])
+async def list_nodes():
+    """List all registered nodes with status"""
+    # Update status based on last_seen (offline if > 30s)
+    current_time = time.time()
+    for node_id, node in NODE_REGISTRY.items():
+        if current_time - node["last_seen"] > 30:
+            node["status"] = "offline"
+        else:
+            node["status"] = "online"
+
+    return {
+        "nodes": list(NODE_REGISTRY.values()),
+        "count": len(NODE_REGISTRY),
+        "sectors": {
+            "healthcare": sum(1 for n in NODE_REGISTRY.values() if n["sector"] == "healthcare" and n["status"] == "online"),
+            "agriculture": sum(1 for n in NODE_REGISTRY.values() if n["sector"] == "agriculture" and n["status"] == "online"),
+            "urban": sum(1 for n in NODE_REGISTRY.values() if n["sector"] == "urban" and n["status"] == "online"),
+        }
+    }
+
+@app.get("/nodes/{node_id}", tags=["Fleet"])
+async def get_node(node_id: str):
+    """Get details of a specific node"""
+    if node_id not in NODE_REGISTRY:
+        raise HTTPException(status_code=404, detail="Node not found")
+    return NODE_REGISTRY[node_id]
+
+@app.delete("/nodes/{node_id}", tags=["Fleet"])
+async def deregister_node(node_id: str):
+    """Remove a node from the registry"""
+    if node_id not in NODE_REGISTRY:
+        raise HTTPException(status_code=404, detail="Node not found")
+    del NODE_REGISTRY[node_id]
+    return {"success": True, "message": f"Node {node_id} deregistered"}
+
 @app.post("/ingest", response_model=IngestResponse, tags=["Ingest"])
 async def ingest_event(event_input: TelemetryEventInput):
     try:
@@ -90,6 +164,14 @@ async def ingest_event(event_input: TelemetryEventInput):
             raise HTTPException(status_code=500, detail="Failed to store event")
 
         await sio.emit('telemetry', event_dict)
+
+        # Update heartbeat for registered nodes
+        service_name = event_input.service
+        for node_id, node in NODE_REGISTRY.items():
+            if service_name and node_id in service_name:
+                node["last_seen"] = time.time()
+                node["status"] = "online"
+                break
 
         print(f"Ingested event: {event_id} from {event_input.source_ip}")
 

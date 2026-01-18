@@ -63,20 +63,57 @@ rate_limit_store = defaultdict(list)
 RATE_LIMIT_WINDOW = 10  # seconds
 RATE_LIMIT_MAX = 5000     # max requests per window (Increased for demo/testing)
 
-# Blocked IPs (temporarily)
+# Blocked IPs (temporarily + synced from Response Engine)
 blocked_ips = set()
 BLOCK_DURATION = 60  # seconds
 block_expiry = {}  # {ip: expiry_timestamp}
 
-def send_security_event(event_type, payload):
+# Response Engine URL for syncing blocked IPs
+RESPONSE_ENGINE_URL = os.environ.get("RESPONSE_ENGINE_URL", "http://localhost:8004")
+_cached_blocked_ips = set()
+_last_blocked_sync = 0
+
+def sync_blocked_ips():
+    """Sync blocked IPs from Response Engine"""
+    global _cached_blocked_ips, _last_blocked_sync
+
+    # Only sync every 5 seconds
+    if time.time() - _last_blocked_sync < 5:
+        return _cached_blocked_ips
+
+    try:
+        resp = requests.get(f"{RESPONSE_ENGINE_URL}/status", timeout=2)
+        if resp.ok:
+            data = resp.json()
+            _cached_blocked_ips = set(data.get("blocked_ips", []))
+            _last_blocked_sync = time.time()
+    except:
+        pass
+
+    return _cached_blocked_ips
+
+def is_ip_blocked(ip):
+    """Check if an IP is blocked (locally or by Response Engine)"""
+    if ip in blocked_ips:
+        return True
+
+    # Check Response Engine blocked list
+    remote_blocked = sync_blocked_ips()
+    return ip in remote_blocked
+
+def send_security_event(event_type, payload, attacker_ip=None):
     """Send security event to Ingest Service"""
     # Inject sector if missing
     if "sector" not in payload:
         payload["sector"] = SECTOR
 
+    # Include attacker IP in payload if provided
+    if attacker_ip:
+        payload["source_ip"] = attacker_ip
+
     data = {
         "event_id": str(uuid.uuid4()),
-        "source_ip": DEVICE_IP,
+        "source_ip": attacker_ip or DEVICE_IP,  # Use attacker IP if provided
         "service": DEVICE_NAME,
         "event_type": event_type,
         "payload": payload,
@@ -98,6 +135,7 @@ SECTOR_BLOCK_RATE = 0.80  # 80% of sector attacks blocked
 # ==========================================
 SECTOR = "healthcare"  # Default sector (can be changed via config)
 DEVICE_REGISTRY = {}
+TARGET_DEVICE = None  # Currently selected target device
 
 DEFAULT_DEVICES = {
     "healthcare": {
@@ -118,23 +156,37 @@ DEFAULT_DEVICES = {
 
 def init_devices(sector):
     """Reset registry to sector defaults"""
-    global DEVICE_REGISTRY
+    global DEVICE_REGISTRY, TARGET_DEVICE
     defaults = DEFAULT_DEVICES.get(sector, DEFAULT_DEVICES["healthcare"])
     DEVICE_REGISTRY.clear()
     for k, v in defaults.items():
         DEVICE_REGISTRY[k] = v.copy()
         DEVICE_REGISTRY[k]["sector"] = sector
+    TARGET_DEVICE = None  # Clear target on sector change
     print(f"🔄 Device Registry re-initialized for Sector: {sector}")
+
+def get_target_device():
+    """Get target device ID (selected or random)"""
+    global TARGET_DEVICE
+    if TARGET_DEVICE and TARGET_DEVICE in DEVICE_REGISTRY:
+        return TARGET_DEVICE
+    # Pick random device if no target selected
+    if DEVICE_REGISTRY:
+        return random.choice(list(DEVICE_REGISTRY.keys()))
+    return None
 
 def update_device_health(device_id, damage=0):
     """Degrade device health on attack"""
-    if device_id in DEVICE_REGISTRY:
+    if device_id is None:
+        device_id = get_target_device()
+    if device_id and device_id in DEVICE_REGISTRY:
         dev = DEVICE_REGISTRY[device_id]
         dev["health"] = max(0, dev["health"] - damage)
         if dev["health"] < 30:
             dev["status"] = "compromised"
         elif dev["health"] < 70:
             dev["status"] = "warning"
+        print(f"📉 Device {device_id} health: {dev['health']}% (damage: {damage})")
         return dev
     return None
 
@@ -277,25 +329,108 @@ def health():
         except (psutil.AccessDenied, PermissionError):
             network_count = 0
 
+        # Get CPU info
+        try:
+            cpu_cores = psutil.cpu_count(logical=False) or 0
+            cpu_threads = psutil.cpu_count(logical=True) or 0
+        except:
+            cpu_cores = 0
+            cpu_threads = 0
+
+        # Get total memory in GB
+        try:
+            total_memory_gb = round(memory_info.total / (1024**3), 1)
+        except:
+            total_memory_gb = 0
+
+        # Get process count
+        try:
+            processes = len(psutil.pids())
+        except:
+            processes = 0
+
+        # Get load average (macOS/Linux only)
+        try:
+            load_avg = round(os.getloadavg()[0], 2)
+        except (AttributeError, OSError):
+            load_avg = None
+
+        # Get network I/O
+        try:
+            net_io = psutil.net_io_counters()
+            network_sent_mb = round(net_io.bytes_sent / (1024**2), 1)
+            network_recv_mb = round(net_io.bytes_recv / (1024**2), 1)
+        except:
+            network_sent_mb = 0
+            network_recv_mb = 0
+
         return jsonify({
             "cpu": cpu_percent,
             "memory": memory_info.percent,
             "disk": disk_info.percent,
-            "network": network_count, # Dashboard expects 'network' (count)
+            "network": network_count,
             "requests_per_second": current_rps,
             "uptime_seconds": uptime_seconds,
             "device_ip": DEVICE_IP,
             "boot_time": boot_time.strftime("%Y-%m-%d %H:%M:%S"),
             "sector": SECTOR,
-            "device_count": len(DEVICE_REGISTRY)
+            "device_count": len(DEVICE_REGISTRY),
+            # Extended metrics
+            "cpu_cores": cpu_cores,
+            "cpu_threads": cpu_threads,
+            "total_memory_gb": total_memory_gb,
+            "processes": processes,
+            "load_avg": load_avg,
+            "network_sent_mb": network_sent_mb,
+            "network_recv_mb": network_recv_mb,
+            "target_device": TARGET_DEVICE
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/devices/heal', methods=['POST'])
+def heal_all_devices():
+    """Manually heal all devices to full health"""
+    for dev_id, dev in DEVICE_REGISTRY.items():
+        dev["health"] = 100
+        dev["status"] = "online"
+    print(f"🔧 All {len(DEVICE_REGISTRY)} devices healed to 100%")
+    return jsonify({
+        "status": "success",
+        "message": f"Healed {len(DEVICE_REGISTRY)} devices",
+        "devices": DEVICE_REGISTRY
+    })
+
+@app.route('/devices/reset', methods=['POST'])
+def reset_devices():
+    """Reset device fleet to defaults"""
+    init_devices(SECTOR)
+    return jsonify({
+        "status": "success",
+        "message": f"Reset fleet for sector {SECTOR}",
+        "devices": DEVICE_REGISTRY
+    })
+
+@app.route('/devices/<device_id>/damage', methods=['POST'])
+def damage_device(device_id):
+    """Apply damage to a specific device"""
+    data = request.json or {}
+    damage = data.get('damage', 15)
+
+    dev = update_device_health(device_id, damage=damage)
+    if dev:
+        return jsonify({
+            "status": "success",
+            "device_id": device_id,
+            "health": dev["health"],
+            "device_status": dev["status"]
+        })
+    return jsonify({"error": "Device not found"}), 404
+
 @app.route('/config', methods=['GET', 'POST'])
 def server_config():
     """Get or update server configuration"""
-    global SECTOR
+    global SECTOR, TARGET_DEVICE
     if request.method == 'POST':
         data = request.json or {}
 
@@ -308,20 +443,36 @@ def server_config():
         # Update Sector (Healthcare/Agri/Urban)
         new_sector = data.get('sector')
         if new_sector and new_sector in DEFAULT_DEVICES:
-            SECTOR = new_sector
-            init_devices(SECTOR)
-            print(f"✅ Switched to Sector: {SECTOR}")
+            if new_sector != SECTOR:
+                SECTOR = new_sector
+                init_devices(SECTOR)
+                print(f"✅ Switched to Sector: {SECTOR}")
+                # Re-register with backend after sector change
+                register_with_backend()
+
+        # Update Target Device
+        target_device = data.get('target_device')
+        if target_device is not None:
+            if target_device == '' or target_device not in DEVICE_REGISTRY:
+                TARGET_DEVICE = None
+                print(f"🎯 Target device cleared")
+            else:
+                TARGET_DEVICE = target_device
+                print(f"🎯 Target device set: {TARGET_DEVICE}")
 
         return jsonify({
             "status": "success",
             "server_url": config['MAIN_SERVER_URL'],
-            "sector": SECTOR
+            "sector": SECTOR,
+            "target_device": TARGET_DEVICE
         }), 200
 
     # GET request - return current configuration
     return jsonify({
         "server_url": config['MAIN_SERVER_URL'],
-        "sector": SECTOR
+        "sector": SECTOR,
+        "target_device": TARGET_DEVICE,
+        "devices": list(DEVICE_REGISTRY.keys())
     }), 200
 
 @app.route('/login', methods=['POST'])
@@ -358,16 +509,28 @@ def login_endpoint():
 def data_endpoint():
     data = request.json or {}
     query = data.get('query', '')
-    ip = request.remote_addr
+
+    # Get the REAL attacker IP from X-Forwarded-For or remote_addr
+    forwarded_for = request.headers.get('X-Forwarded-For')
+    if forwarded_for:
+        ip = forwarded_for.split(',')[0].strip()
+    else:
+        ip = request.remote_addr
 
     # Check for SQLi (Heuristic) - optional, backend does heavier lifting
     heuristic_sqli = detect_sqli(query)
     is_blocked = heuristic_sqli and (random.random() < SQLI_BLOCK_RATE)
 
-    action = "BLOCKED" if is_blocked else "PROCESSED"
-    print(f"{'🚫' if is_blocked else '⚠️'} [SQL] Query from {ip}: {query[:30]}... Status: {action}")
+    # Damage target device on SQL injection attack
+    target_device = get_target_device()
+    dev_status = None
+    if heuristic_sqli and target_device:
+        dev_status = update_device_health(target_device, damage=10)
 
-    # Send event for analysis
+    action = "BLOCKED" if is_blocked else "PROCESSED"
+    print(f"{'🚫' if is_blocked else '⚠️'} [SQL] Query from {ip}: {query[:30]}... Status: {action} Target: {target_device}")
+
+    # Send event for analysis - pass attacker_ip explicitly
     send_security_event("sql_injection_attempt", {
         "query": query,
         "network_data": {
@@ -375,17 +538,25 @@ def data_endpoint():
              # Mock other network stats matching ML features
              "syn_count": 5, "rst_count": 2, "IAT": 1000
         },
-        "ip": ip,
+        "ip": ip,  # Keep in payload for compatibility
+        "source_ip": ip,  # Also add source_ip explicitly
         "blocked": is_blocked,
-        "action": action
-    })
+        "action": action,
+        "device_id": target_device,
+        "device_health": dev_status["health"] if dev_status else None
+    }, attacker_ip=ip)  # Pass as attacker_ip parameter
 
     if is_blocked:
-        return jsonify({"error": "Malicious query detected", "blocked": True}), 403
+        return jsonify({"error": "Malicious query detected", "blocked": True, "device_id": target_device}), 403
 
     # Simulate DB Delay
     time.sleep(random.uniform(0.1, 0.3))
-    return jsonify({"status": "success", "rows": []}), 200
+    return jsonify({
+        "status": "success",
+        "rows": [],
+        "device_id": target_device,
+        "device_health": dev_status["health"] if dev_status else None
+    }), 200
 
 # ==========================================
 # SECTOR-SPECIFIC ENDPOINTS (ML Attacks)
@@ -395,7 +566,7 @@ def iomt_endpoint():
     """Healthcare IoMT endpoint"""
     data = request.json or {}
     sensor_data = data.get("sensor_data", [])
-    device_id = data.get("device_id")
+    device_id = data.get("device_id") or get_target_device()  # Use target if no device specified
     ip = request.remote_addr
 
     # Targeted damage
@@ -419,15 +590,15 @@ def iomt_endpoint():
     })
 
     if is_blocked:
-        return jsonify({"error": "IoMT attack blocked", "blocked": True}), 403
-    return jsonify({"status": "received", "warning": "anomaly_detected"}), 200
+        return jsonify({"error": "IoMT attack blocked", "blocked": True, "device_id": device_id}), 403
+    return jsonify({"status": "received", "warning": "anomaly_detected", "device_id": device_id, "health": dev_status["health"] if dev_status else None}), 200
 
 @app.route('/sensors', methods=['POST'])
 def sensors_endpoint():
     """Agriculture sensors endpoint"""
     data = request.json or {}
     sensor_data = data.get("sensor_data", [])
-    device_id = data.get("device_id")
+    device_id = data.get("device_id") or get_target_device()  # Use target if no device specified
     ip = request.remote_addr
 
     # Targeted damage
@@ -451,15 +622,15 @@ def sensors_endpoint():
     })
 
     if is_blocked:
-        return jsonify({"error": "Sensor anomaly blocked", "blocked": True}), 403
-    return jsonify({"status": "received", "warning": "physics_violation"}), 200
+        return jsonify({"error": "Sensor anomaly blocked", "blocked": True, "device_id": device_id}), 403
+    return jsonify({"status": "received", "warning": "physics_violation", "device_id": device_id, "health": dev_status["health"] if dev_status else None}), 200
 
 @app.route('/traffic', methods=['POST'])
 def traffic_endpoint():
     """Urban traffic endpoint"""
     data = request.json or {}
     sensor_data = data.get("sensor_data", [])
-    device_id = data.get("device_id")
+    device_id = data.get("device_id") or get_target_device()  # Use target if no device specified
     ip = request.remote_addr
 
     dev_status = update_device_health(device_id, damage=15)
@@ -482,8 +653,8 @@ def traffic_endpoint():
     })
 
     if is_blocked:
-        return jsonify({"error": "Traffic anomaly blocked", "blocked": True}), 403
-    return jsonify({"status": "received", "warning": "traffic_anomaly"}), 200
+        return jsonify({"error": "Traffic anomaly blocked", "blocked": True, "device_id": device_id}), 403
+    return jsonify({"status": "received", "warning": "traffic_anomaly", "device_id": device_id, "health": dev_status["health"] if dev_status else None}), 200
 
 def telemetry_loop():
     """Constantly reports system health"""
@@ -553,6 +724,133 @@ def telemetry_loop():
         time.sleep(2)
 
 # ==========================================
+# FLEET REGISTRATION (Multi-Laptop Support)
+# ==========================================
+def get_ingest_base_url():
+    """Get base URL for Ingest Service (without /ingest path)"""
+    url = config["MAIN_SERVER_URL"]
+    # Remove trailing /ingest if present
+    if url.endswith("/ingest"):
+        return url[:-7]
+    return url
+
+def register_with_backend():
+    """Register this node with the central backend"""
+    try:
+        register_url = f"{get_ingest_base_url()}/register"
+        response = requests.post(register_url, json={
+            "node_id": DEVICE_ID,
+            "ip": DEVICE_IP,
+            "port": 5050,
+            "sector": SECTOR
+        }, timeout=5)
+
+        if response.status_code == 200:
+            print(f"✅ Registered with backend as {SECTOR.upper()} node")
+            return True
+        else:
+            print(f"⚠️ Registration failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"⚠️ Could not register with backend: {e}")
+        return False
+
+@app.route('/receive-attack', methods=['POST'])
+def receive_attack():
+    """Receive attack from API Gateway (routed by sector)"""
+    data = request.json or {}
+    attack_type = data.get("attack_type", "unknown")
+    payload = data.get("payload", {})
+    from_gateway = data.get("from_gateway", False)
+    attacker_ip = data.get("attacker_ip", request.remote_addr)
+    device_id = data.get("device_id") or payload.get("device_id") or get_target_device()
+
+    # 🛡️ CHECK IF ATTACKER IS BLOCKED
+    if is_ip_blocked(attacker_ip):
+        print(f"🚫 [BLOCKED] Attack from {attacker_ip} rejected - IP is blocked!")
+        return jsonify({
+            "status": "blocked",
+            "reason": f"IP {attacker_ip} is blocked by Response Engine",
+            "message": "🛡️ Attack blocked! Defensive measures active."
+        }), 403
+
+    print(f"🎯 [ROUTED ATTACK] Type: {attack_type} from IP: {attacker_ip} Target: {device_id}")
+
+    # Apply damage to target device
+    dev_status = update_device_health(device_id, damage=15)
+
+    # Route to appropriate handler based on attack type
+    if attack_type == "sql":
+        query = payload.get("query", "")
+        send_security_event("sql_injection_attempt", {
+            "query": query,
+            "ip": attacker_ip,
+            "device_id": device_id,
+            "device_health": dev_status["health"] if dev_status else None,
+            "routed": True
+        }, attacker_ip=attacker_ip)
+        return jsonify({
+            "status": "processed",
+            "type": "sql",
+            "attacker_ip": attacker_ip,
+            "device_id": device_id,
+            "device_health": dev_status["health"] if dev_status else None
+        })
+
+    elif attack_type == "brute":
+        username = payload.get("username", "unknown")
+        send_security_event("auth_failure", {
+            "username": username,
+            "ip": attacker_ip,
+            "device_id": device_id,
+            "device_health": dev_status["health"] if dev_status else None,
+            "routed": True
+        }, attacker_ip=attacker_ip)
+        return jsonify({
+            "status": "processed",
+            "type": "brute",
+            "attacker_ip": attacker_ip,
+            "device_id": device_id,
+            "device_health": dev_status["health"] if dev_status else None
+        })
+
+    elif attack_type in ["healthcare", "agriculture", "urban"]:
+        sensor_data = payload.get("sensor_data", [])
+        send_security_event(f"{attack_type}_attack", {
+            "domain": attack_type,
+            "sensor_data": sensor_data,
+            "ip": attacker_ip,
+            "device_id": device_id,
+            "device_health": dev_status["health"] if dev_status else None,
+            "routed": True
+        }, attacker_ip=attacker_ip)
+        return jsonify({
+            "status": "processed",
+            "type": attack_type,
+            "attacker_ip": attacker_ip,
+            "device_id": device_id,
+            "device_health": dev_status["health"] if dev_status else None
+        })
+
+    else:
+        # Generic attack
+        send_security_event("routed_attack", {
+            "attack_type": attack_type,
+            "payload": payload,
+            "ip": attacker_ip,
+            "device_id": device_id,
+            "device_health": dev_status["health"] if dev_status else None,
+            "routed": True
+        }, attacker_ip=attacker_ip)
+        return jsonify({
+            "status": "processed",
+            "type": "generic",
+            "attacker_ip": attacker_ip,
+            "device_id": device_id,
+            "device_health": dev_status["health"] if dev_status else None
+        })
+
+# ==========================================
 # RUNNER
 # ==========================================
 if __name__ == '__main__':
@@ -561,8 +859,12 @@ if __name__ == '__main__':
     print(f"║──────────────────────────────────────────║")
     print(f"║  Device: {DEVICE_NAME:<24}        ║")
     print(f"║  IP:     {DEVICE_IP:<24}        ║")
+    print(f"║  Sector: {SECTOR.upper():<24}        ║")
     print(f"║  Server: {get_server_url():<24}  ║")
     print(f"╚══════════════════════════════════════════╝")
+
+    # Register with backend
+    register_with_backend()
 
     # Start Telemetry in Background
     t = threading.Thread(target=telemetry_loop, daemon=True)
@@ -570,3 +872,4 @@ if __name__ == '__main__':
 
     # Start Attack Listener Web Server
     app.run(host='0.0.0.0', port=5050)
+
