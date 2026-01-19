@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: systemapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: systemapp
+  template:
+    metadata:
+      labels:
+        app: systemapp
+    spec:
+      containers:
+      - name: systemapp
+        image: systemapp:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 5050
+        env:
+        - name: MAIN_SERVER_URL
+          value: "http://ingest-service:8001/ingest"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: systemapp
+spec:
+  selector:
+    app: systemapp
+  ports:
+  - port: 5050
+    targetPort: 5050
+  type: ClusterIP
