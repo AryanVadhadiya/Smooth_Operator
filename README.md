@@ -5,6 +5,7 @@
 ![Dashboard Overview](docs/images/dashboard-main.png)
 
 Threat_Ops.ai is a comprehensive, microservices-based **Security Orchestration, Automation, and Response (SOAR)** platform. It provides real-time monitoring, AI-driven threat detection, and automated incident response for critical infrastructures (Healthcare, Agriculture, Urban Systems).
+<img width="935" height="160" alt="image" src="https://github.com/user-attachments/assets/08718730-47f9-4c6d-a306-704600f93560" />
 
 ---
 
@@ -20,9 +21,8 @@ Threat_Ops.ai is a comprehensive, microservices-based **Security Orchestration, 
 ---
 
 ## 🏗️ System Architecture
-
 The system follows a modular microservices architecture, ensuring scalability and isolation.
-<img width="1280" height="679" alt="image" src="https://github.com/user-attachments/assets/8c38d68c-1483-407c-955f-6116ced76add" />
+<img width="1600" height="833" alt="image" src="https://github.com/user-attachments/assets/a51e6861-e7b0-498b-93e2-1f5f9791fa7f" />
 
 **How the engine works
 **![Architecture Diagram](docs/images/architecture-diagram.png)
