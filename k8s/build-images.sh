@@ -3,6 +3,7 @@
 set -e  # Exit on any error
 
 # Build Docker images for all services
+cd "$(dirname "$0")/.."
 
 cd backend/ingest-service
 docker build -t ingest-service:latest .
@@ -24,5 +25,8 @@ docker build -t frontend:latest .
 
 cd ../model_microservice
 docker build -t model-microservice:latest .
+
+cd ../systemapp
+docker build -t systemapp:latest .
 
 echo "All images built successfully."

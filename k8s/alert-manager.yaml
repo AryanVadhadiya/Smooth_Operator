@@ -13,18 +13,29 @@ spec:
         app: alert-manager
     spec:
       containers:
-      - name: alert-manager
-        image: alert-manager:latest
-        imagePullPolicy: Never
-        ports:
-        - containerPort: 8003
-        env:
-        - name: PORT
-          value: "8003"
-        - name: API_GATEWAY_URL
-          value: "http://api-gateway:3001"
-        - name: RESPONSE_ENGINE_URL
-          value: "http://response-engine:8004"
+        - name: alert-manager
+          image: alert-manager:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8003
+          env:
+            - name: PORT
+              value: "8003"
+            - name: API_GATEWAY_URL
+              value: "http://api-gateway:3001"
+            - name: RESPONSE_ENGINE_URL
+              value: "http://response-engine:8004"
+            # Resend Email Configuration
+            - name: EMAIL_ENABLED
+              value: "true"
+            - name: RESEND_API_KEY
+              value: "re_MCfNFxCX_3iqBxEneiiAoq5bZ1a4y4Fc3"
+            - name: EMAIL_FROM
+              value: "noreply@pclub.jclouds.space"
+            - name: EMAIL_TO
+              value: "jay.s7@ahduni.edu.in"
+            - name: NOTIFY_SEVERITIES
+              value: "critical,warning"
 ---
 apiVersion: v1
 kind: Service
@@ -34,6 +45,6 @@ spec:
   selector:
     app: alert-manager
   ports:
-  - port: 8003
-    targetPort: 8003
+    - port: 8003
+      targetPort: 8003
   type: ClusterIP
